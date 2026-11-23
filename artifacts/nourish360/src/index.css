@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Fraunces:opsz,wght@9..144,400..800&family=Spline+Sans+Mono:wght@400;500;600&display=swap');
 @import 'leaflet/dist/leaflet.css';
 @import 'tailwindcss';
 @import 'tw-animate-css';
@@ -80,48 +79,48 @@
   --elevate-1: rgba(0, 0, 0, 0.03);
   --elevate-2: rgba(0, 0, 0, 0.08);
 
-  --background: 38 52% 94%;
-  --foreground: 285 38% 14%;
-  --border: 34 30% 82%;
-  --card: 40 60% 97%;
-  --card-foreground: 285 38% 14%;
-  --card-border: 34 30% 84%;
-  --sidebar: 38 45% 91%;
-  --sidebar-foreground: 285 38% 14%;
-  --sidebar-border: 34 30% 82%;
-  --sidebar-primary: 312 52% 30%;
-  --sidebar-primary-foreground: 40 60% 97%;
-  --sidebar-accent: 42 86% 86%;
-  --sidebar-accent-foreground: 285 38% 14%;
-  --sidebar-ring: 312 52% 30%;
-  --popover: 40 60% 97%;
-  --popover-foreground: 285 38% 14%;
-  --popover-border: 34 30% 82%;
-  --primary: 312 52% 30%;
-  --primary-foreground: 40 60% 97%;
-  --secondary: 42 86% 56%;
-  --secondary-foreground: 285 38% 14%;
-  --muted: 36 38% 89%;
-  --muted-foreground: 290 12% 38%;
-  --accent: 168 38% 86%;
-  --accent-foreground: 172 50% 18%;
-  --destructive: 8 80% 47%;
-  --destructive-foreground: 40 60% 97%;
-  --input: 34 26% 76%;
-  --ring: 312 52% 30%;
-  --chart-1: 312 52% 34%;
-  --chart-2: 42 86% 48%;
-  --chart-3: 172 45% 32%;
-  --chart-4: 8 75% 50%;
-  --chart-5: 260 30% 45%;
-  --tier-green: 160 45% 30%;
-  --tier-amber: 38 92% 46%;
-  --tier-red: 8 80% 47%;
+  --background: 210.00000 40.00000% 98.03922%;
+  --foreground: 190 40% 10%;
+  --border: 190 14% 72%;
+  --card: 210.00000 40.00000% 98.03922%;
+  --card-foreground: 190 40% 10%;
+  --card-border: 190 14% 70%;
+  --sidebar: 40 30% 93%;
+  --sidebar-foreground: 190 40% 10%;
+  --sidebar-border: 190 14% 72%;
+  --sidebar-primary: 175 77% 26%;
+  --sidebar-primary-foreground: 210 40% 98%;
+  --sidebar-accent: 172 40% 88%;
+  --sidebar-accent-foreground: 175 80% 16%;
+  --sidebar-ring: 175 77% 26%;
+  --popover: 210 40% 98%;
+  --popover-foreground: 190 40% 10%;
+  --popover-border: 190 14% 72%;
+  --primary: 175.33981 77.44361% 26.07843%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 32 95% 44%;
+  --secondary-foreground: 190 40% 10%;
+  --muted: 40 22% 91%;
+  --muted-foreground: 192 14% 32%;
+  --accent: 172 40% 88%;
+  --accent-foreground: 175 80% 16%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 210 40% 98%;
+  --input: 190 14% 62%;
+  --ring: 175 77% 26%;
+  --chart-1: 175 77% 26%;
+  --chart-2: 32 95% 44%;
+  --chart-3: 142 76% 36%;
+  --chart-4: 0 72% 51%;
+  --chart-5: 200 50% 40%;
+  --tier-green: 142.12766 76.21622% 36.27451%;
+  --tier-amber: 32.13270 94.61883% 43.72549%;
+  --tier-red: 0.00000 72.22222% 50.58824%;
 
-  --app-font-sans: 'Bricolage Grotesque', sans-serif;
-  --app-font-serif: 'Fraunces', Georgia, serif;
-  --app-font-mono: 'Spline Sans Mono', monospace;
-  --radius: 0.9rem; /* 8px */
+  --app-font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', 'Noto Sans', 'Noto Sans Devanagari', 'Nirmala UI', 'Mangal', sans-serif;
+  --app-font-serif: var(--app-font-sans);
+  --app-font-mono: ui-monospace, 'SFMono-Regular', 'Roboto Mono', 'Noto Sans Mono', monospace;
+  --radius: 0.9rem;
   --shadow-2xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0); /*replace with H S L */
   --shadow-xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0); /*replace with H S L */
   --shadow-sm:
@@ -205,43 +204,43 @@
   --elevate-1: rgba(255, 255, 255, 0.04);
   --elevate-2: rgba(255, 255, 255, 0.09);
 
-  --background: 285 30% 9%;
-  --foreground: 38 40% 92%;
-  --border: 34 30% 82%;
-  --card: 285 28% 13%;
-  --card-foreground: 38 40% 92%;
-  --card-border: 34 30% 84%;
-  --sidebar: 38 45% 91%;
-  --sidebar-foreground: 38 40% 92%;
-  --sidebar-border: 34 30% 82%;
-  --sidebar-primary: 312 52% 30%;
-  --sidebar-primary-foreground: 285 28% 13%;
-  --sidebar-accent: 42 86% 86%;
-  --sidebar-accent-foreground: 38 40% 92%;
-  --sidebar-ring: 312 52% 30%;
-  --popover: 285 28% 13%;
-  --popover-foreground: 38 40% 92%;
-  --popover-border: 34 30% 82%;
-  --primary: 312 52% 30%;
-  --primary-foreground: 285 28% 13%;
-  --secondary: 42 86% 56%;
-  --secondary-foreground: 38 40% 92%;
-  --muted: 36 38% 89%;
-  --muted-foreground: 290 12% 38%;
-  --accent: 168 38% 86%;
-  --accent-foreground: 172 50% 18%;
-  --destructive: 8 80% 47%;
-  --destructive-foreground: 285 28% 13%;
-  --input: 34 26% 76%;
-  --ring: 312 52% 30%;
-  --chart-1: 312 52% 34%;
-  --chart-2: 42 86% 48%;
-  --chart-3: 172 45% 32%;
-  --chart-4: 8 75% 50%;
-  --chart-5: 260 30% 45%;
-  --tier-green: 160 45% 30%;
-  --tier-amber: 38 92% 46%;
-  --tier-red: 8 80% 47%;
+  --background: 210.00000 40.00000% 98.03922%;
+  --foreground: 190 40% 10%;
+  --border: 190 14% 72%;
+  --card: 210.00000 40.00000% 98.03922%;
+  --card-foreground: 190 40% 10%;
+  --card-border: 190 14% 70%;
+  --sidebar: 40 30% 93%;
+  --sidebar-foreground: 190 40% 10%;
+  --sidebar-border: 190 14% 72%;
+  --sidebar-primary: 175 77% 26%;
+  --sidebar-primary-foreground: 210 40% 98%;
+  --sidebar-accent: 172 40% 88%;
+  --sidebar-accent-foreground: 175 80% 16%;
+  --sidebar-ring: 175 77% 26%;
+  --popover: 210 40% 98%;
+  --popover-foreground: 190 40% 10%;
+  --popover-border: 190 14% 72%;
+  --primary: 175.33981 77.44361% 26.07843%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 32 95% 44%;
+  --secondary-foreground: 190 40% 10%;
+  --muted: 40 22% 91%;
+  --muted-foreground: 192 14% 32%;
+  --accent: 172 40% 88%;
+  --accent-foreground: 175 80% 16%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 210 40% 98%;
+  --input: 190 14% 62%;
+  --ring: 175 77% 26%;
+  --chart-1: 175 77% 26%;
+  --chart-2: 32 95% 44%;
+  --chart-3: 142 76% 36%;
+  --chart-4: 0 72% 51%;
+  --chart-5: 200 50% 40%;
+  --tier-green: 142.12766 76.21622% 36.27451%;
+  --tier-amber: 32.13270 94.61883% 43.72549%;
+  --tier-red: 0.00000 72.22222% 50.58824%;
 
   --shadow-2xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0);
   --shadow-xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0);
@@ -385,18 +384,44 @@
   }
 }
 
-.font-display { font-family: var(--app-font-serif); font-optical-sizing: auto; letter-spacing: -0.02em; }
-.phulkari {
-  background-image:
-    linear-gradient(45deg, hsl(var(--secondary) / .22) 25%, transparent 25%, transparent 75%, hsl(var(--secondary) / .22) 75%),
-    linear-gradient(45deg, hsl(var(--secondary) / .22) 25%, transparent 25%, transparent 75%, hsl(var(--secondary) / .22) 75%);
-  background-size: 22px 22px; background-position: 0 0, 11px 11px;
+.font-display { font-family: var(--app-font-serif); letter-spacing: -0.015em; }
+/* legacy class kept, now a calm teal stripe rather than texture */
+.phulkari { background-image: linear-gradient(90deg, hsl(var(--tier-red)) 0 33.3%, hsl(var(--tier-amber)) 33.3% 66.6%, hsl(var(--tier-green)) 66.6%); background-size: 100% 4px; background-repeat: no-repeat; background-position: bottom; }
+:lang(hi), .hi { line-height: 1.55; }
+/* Shared field primitives */
+@layer components {
+.tap { min-height: 52px; display: inline-flex; align-items: center; justify-content: center; gap: .5rem; padding: .55rem .85rem; border-radius: .9rem; border: 2px solid hsl(var(--foreground) / .85); font-weight: 700; font-size: 1rem; background: hsl(var(--card)); color: hsl(var(--foreground)); transition: transform .15s ease, background-color .15s ease; }
+.tap:hover { background: hsl(var(--accent)); }
+.tap:focus-visible, .field:focus-visible { outline: 3px solid hsl(var(--ring)); outline-offset: 2px; }
+.tap:disabled { opacity: .55; cursor: not-allowed; }
+.tap-primary { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); border-color: hsl(175 80% 16%); }
+.tap-primary:hover { background: hsl(175 77% 22%); }
+.tap-red { background: hsl(var(--tier-red)); color: hsl(var(--destructive-foreground)); border-color: hsl(0 74% 36%); }
+.tap-red:hover { background: hsl(0 74% 44%); }
+.field { min-height: 52px; width: 100%; padding: 0 1rem; border-radius: .9rem; border: 2px solid hsl(var(--input)); background: hsl(var(--card)); font-size: 1.05rem; color: hsl(var(--foreground)); }
+.field:focus { border-color: hsl(var(--primary)); }
+.panel { background: hsl(var(--card)); border: 2px solid hsl(var(--card-border)); border-radius: 1.25rem; padding: 1.25rem; box-shadow: 0 1px 0 hsl(var(--foreground) / .06), 0 10px 24px -18px hsl(175 77% 20% / .45); }
+.zone-red { --zone: var(--tier-red); } .zone-amber { --zone: var(--tier-amber); } .zone-green { --zone: var(--tier-green); }
+.zone { border: 2px solid hsl(var(--zone)); border-left-width: 10px; background: hsl(var(--zone) / .07); border-radius: 1rem; }
 }
-body::before { content:''; position:fixed; inset:0; pointer-events:none; z-index:60; opacity:.05;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.85'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
-@keyframes rise { from { opacity:0; transform: translateY(14px);} to {opacity:1; transform:none;} }
-.rise { animation: rise .6s cubic-bezier(.2,.7,.2,1) both; }
+@keyframes rise { from { opacity:0; transform: translateY(12px);} to {opacity:1; transform:none;} }
+.rise { animation: rise .5s cubic-bezier(.2,.7,.2,1) both; }
 @keyframes beacon { 0%{transform:scale(.8);opacity:.7} 100%{transform:scale(2.2);opacity:0} }
 .beacon::after { content:''; position:absolute; inset:0; border-radius:inherit; background: currentColor; animation: beacon 1.8s ease-out infinite; z-index:-1; }
-.press { transition: transform .15s ease; } .press:active { transform: scale(.97); }
+@keyframes pop { 0%{transform:scale(1)} 40%{transform:scale(.94)} 100%{transform:scale(1)} }
+.pop { animation: pop .25s ease; }
+.press, .tap { transition: transform .15s ease, background-color .15s ease; } .press:active, .tap:active { transform: scale(.97); }
 .leaflet-container { font-family: var(--app-font-sans); background: hsl(var(--muted)); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
+  .beacon::after { display: none; }
+  .press:active, .tap:active { transform: none; }
+}
+
+@media print {
+  body:has(#print-health-id) * { visibility: hidden; }
+  body:has(#print-health-id) #print-health-id,
+  body:has(#print-health-id) #print-health-id label,
+  body:has(#print-health-id) #print-health-id input { visibility: visible; }
+  #print-health-id { position: absolute; inset: 20mm auto auto 20mm; min-width: 90mm; background: white; color: black; }
+}

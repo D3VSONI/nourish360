@@ -1,6 +1,6 @@
 kind = "web"
 previewPath = "/"
-title = "Nourish360"
+title = "Notion360"
 description = "Offline-first maternal and child health workflow demo for Sonipat, with synthetic longitudinal cases and simulated emergency tracking."
 version = "1.0.0"
 id = "artifacts/nourish360"

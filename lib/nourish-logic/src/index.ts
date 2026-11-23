@@ -48,19 +48,19 @@ export function evaluate(patient: Patient, input: WireAssessment, prior: WireVis
   const child = patient.patient_type === 'CHILD';
   const pregnant = patient.patient_type === 'PREGNANT_LADY';
   if (child) {
-    if (/unable to drink|unable to breastfeed|unable to feed|vomit.*everything|unconscious|letharg|convuls|seizure|difficult breathing|breathing difficulty/.test(text)) red.push('IMNCI example: a general danger sign or reported breathing difficulty.');
+    if (/unable to drink|unable to breastfeed|unable to feed|vomit.*everything|unconscious|letharg|convuls|seizure|difficult breathing|breathing difficulty|chest indrawing/.test(text)) red.push('IMNCI example: a general danger sign or reported breathing difficulty.');
     if (v.temp_c !== undefined && (v.temp_c < 35.5 || v.temp_c >= 39.5)) red.push(`Demo priority rule: temperature ${v.temp_c} °C.`);
     const age = patient.profile.dob_months ?? 0;
     const fast = age < 2 ? 60 : age < 12 ? 50 : 40;
     if (v.resp_rate !== undefined && v.resp_rate >= fast) amber.push(`IMNCI example: recorded breathing rate ${v.resp_rate}/min at ${age} months.`);
     if (/fast breathing|fever|cold body|umbilic/.test(text)) amber.push('Reported temperature, breathing, or umbilical concern.');
-    if (age >= 6 && v.muac_cm !== undefined) {
+    if (age >= 6 && age < 60 && v.muac_cm !== undefined) {
       if (v.muac_cm < 11.5) red.push(`Demo nutrition rule: MUAC ${v.muac_cm} cm.`);
       else if (v.muac_cm < 12.5) amber.push(`Demo nutrition rule: MUAC ${v.muac_cm} cm.`);
     }
     const flat = weight && (weight.delta < 0 || (history.filter(p => p.vitals.weight_kg !== undefined).length >= 2 && weight.delta === 0 && weight.long <= 0.1));
     if (flat) amber.push('Weight did not increase across the recorded checkups.');
-    if (flat || (age >= 6 && v.muac_cm !== undefined && v.muac_cm < 12.5)) {
+    if (flat || (age >= 6 && age < 60 && v.muac_cm !== undefined && v.muac_cm < 12.5)) {
       add('Growth faltering / undernutrition', 'Elevated demo flag', 'Next 1–6 months', 'The recorded growth or MUAC pattern warrants review; there is no predicted personal probability.', 'Discuss growth measurements and age-appropriate feeding with a trained health worker.', 'यह एक उदाहरण है। बच्चे के वजन और भोजन के बारे में स्वास्थ्यकर्मी से बात करें।');
     }
     if (weight) direction += weight.delta < 0 ? -1 : weight.delta > 0 ? 1 : 0;

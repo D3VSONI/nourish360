@@ -1,23 +1,8 @@
-import { Card, CardContent } from '@/components/ui/card';
-import { AlertCircle } from 'lucide-react';
+import { TriangleAlert } from 'lucide-react';
+import { Link } from 'wouter';
+import { useLang } from '@/lib/i18n';
 
-export default function NotFound() {
-  return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gray-50">
-      <Card className="w-full max-w-md mx-4">
-        <CardContent className="pt-6">
-          <div className="flex mb-4 gap-2">
-            <AlertCircle className="h-8 w-8 text-red-500" />
-            <h1 className="text-2xl font-bold text-gray-900">
-              404 Page Not Found
-            </h1>
-          </div>
-
-          <p className="mt-4 text-sm text-gray-600">
-            Did you forget to add the page to the router?
-          </p>
-        </CardContent>
-      </Card>
-    </div>
-  );
+export default function NotFound(){
+  const {tr}=useLang();
+  return <section className="mx-auto max-w-md px-4 py-14"><div className="panel"><h1 className="flex items-center gap-2 text-2xl font-bold"><TriangleAlert className="shrink-0 text-amber-700"/>{tr('Page not found','पेज नहीं मिला')}</h1><Link href="/" className="tap tap-primary mt-4">{tr('Back to home','मुख्य पेज पर जाएँ')}</Link></div></section>;
 }

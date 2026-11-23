@@ -1,221 +1,78 @@
-import { useEffect, useState } from 'react';
-import { Link, useLocation, useParams } from 'wouter';
-import { ArrowLeft, Info, Loader2, MessageSquare, PhoneCall } from 'lucide-react';
-import {
-  useGetCatalog, useRegisterPatient, useSendOtp, useVerifyOtp,
-  type Challenge, type ClinicalProfile, type PatientType, type RegistrationInputChannel,
-} from '@workspace/api-client-react';
-import { errorMessage, useApp, ROLE_META, slugToRole } from '@/lib/store';
+import { useEffect,useRef,useState,type FormEvent } from 'react';
+import { Link,useLocation,useParams } from 'wouter';
+import { ArrowLeft,Clipboard,Info,Loader2,MessageSquare,PhoneCall,Printer } from 'lucide-react';
+import { useRegisterPatient,useSendOtp,useVerifyOtp,type Challenge,type ClinicalProfile,type PatientType,type RegistrationInputChannel } from '@workspace/api-client-react';
+import { villages } from '@workspace/nourish-logic';
+import { errorMessage,slugToRole,useApp } from '@/lib/store';
+import { local,localizeMessage,roleLabel,saved,useLang,villageName } from '@/lib/i18n';
 import { useToast } from '@/hooks/use-toast';
-import { DemoBar } from '@/components/demo-bar';
+import { FieldStepper } from '@/components/field-stepper';
+import { RoleArt } from '@/components/role-art';
+import { Listen } from '@/components/listen';
 import NotFound from '@/pages/not-found';
-import { cn } from '@/lib/utils';
 
-const field = 'w-full rounded-xl border bg-background px-3.5 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20';
-const PHONE_RE = /^(?:\+91)?00000\d{5}$/;
-const SAMPLE: Record<PatientType, { name: string; profile: ClinicalProfile; guardian?: string }> = {
-  CHILD: { name: 'Demo Child Kavya', guardian: 'Demo Guardian Sunita', profile: { dob_months: 14, birth_weight_kg: 2.6, last_weight_kg: 8.4 } },
-  PREGNANT_LADY: { name: 'Demo Mother Rekha', profile: { age: 24, gestational_weeks: 26, blood_group: 'B+', gravida: 2 } },
-  MOTHER: { name: 'Demo Mother Pooja', profile: { age: 27, days_postpartum: 9, delivery_type: 'Normal', blood_group: 'O+' } },
+const PHONE_RE=/^(?:\+91)?00000\d{5}$/;
+const SAMPLE:Record<PatientType,{name:string;profile:ClinicalProfile;guardian?:string}>={
+ CHILD:{name:'Demo Child Kavya',guardian:'Demo Guardian Sunita',profile:{dob_months:14,birth_weight_kg:2.6,last_weight_kg:8.4}},
+ PREGNANT_LADY:{name:'Demo Mother Rekha',profile:{age:24,gestational_weeks:26,blood_group:'B+',gravida:2}},
+ MOTHER:{name:'Demo Mother Pooja',profile:{age:27,days_postpartum:9,delivery_type:'Normal',blood_group:'O+'}},
 };
-
-function L({ label, children }: { label: string; children: React.ReactNode }) {
-  return <label className="block"><span className="mb-1.5 block text-xs font-medium text-muted-foreground">{label}</span>{children}</label>;
+const chip=(on:boolean)=>`tap w-full ${on?'border-primary bg-accent text-primary':'bg-white'}`;
+function Channel({value,onChange}:{value:RegistrationInputChannel;onChange:(c:RegistrationInputChannel)=>void}){
+  const {tr}=useLang();return <fieldset><legend className="mb-2 font-bold">{tr('Demo code method','डेमो कोड का तरीका')}</legend><div className="grid grid-cols-2 gap-2">{(['sms','call'] as const).map(c=><button key={c} type="button" className={`${chip(value===c)} gap-2`} data-testid={`button-channel-${c}`} aria-pressed={value===c} onClick={()=>onChange(c)}>{c==='sms'?<MessageSquare size={18}/>:<PhoneCall size={18}/>} {c==='sms'?tr('SMS','मैसेज'):tr('Voice call','फ़ोन कॉल')}</button>)}</div><p className="mt-2 text-xs text-muted-foreground">{tr('The code appears here. No message or call is sent.','कोड यहीं दिखेगा। कोई मैसेज या कॉल नहीं जाएगी।')}</p></fieldset>;
 }
-
-function Channel({ value, onChange }: { value: RegistrationInputChannel; onChange: (c: RegistrationInputChannel) => void }) {
-  return (
-    <div className="grid grid-cols-2 gap-2">
-      {(['sms', 'call'] as const).map((c) => (
-        <button type="button" key={c} onClick={() => onChange(c)} data-testid={`button-channel-${c}`}
-          className={cn('press flex items-center justify-center gap-2 rounded-xl border py-2.5 text-sm', value === c ? 'border-primary bg-primary/10 font-semibold text-primary' : 'hover:bg-muted')}>
-          {c === 'sms' ? <MessageSquare className="h-4 w-4" /> : <PhoneCall className="h-4 w-4" />}{c === 'sms' ? 'Verify via SMS' : 'Verify via voice call'}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-export default function Auth() {
-  const params = useParams<{ role: string }>();
-  const role = slugToRole(params.role);
-  if (!role) return <NotFound />;
-  return <AuthInner key={role} role={role} />;
-}
-
-function AuthInner({ role }: { role: PatientType }) {
-  const { setRole, adoptRecord, online } = useApp();
-  const {toast} = useToast();
-  const [, navigate] = useLocation();
-  const catalog = useGetCatalog();
-  const register = useRegisterPatient();
-  const sendOtp = useSendOtp();
-  const verify = useVerifyOtp();
-  const [tab, setTab] = useState<'new' | 'login'>('new');
-  const [channel, setChannel] = useState<RegistrationInputChannel>('sms');
-  const s = SAMPLE[role];
-  const [name, setName] = useState(s.name);
-  const [phone, setPhone] = useState('0000000000');
-  const [village, setVillage] = useState('');
-  const [guardian, setGuardian] = useState(s.guardian ?? '');
-  const [guardianConsent, setGuardianConsent] = useState(false);
-  const [consent, setConsent] = useState(false);
-  const [profile, setProfile] = useState<ClinicalProfile>(s.profile);
-  const [hid, setHid] = useState('');
-  const [loginPhone, setLoginPhone] = useState('');
-  const [challenge, setChallenge] = useState<Challenge | null>(null);
-  const [code, setCode] = useState('');
-  const [err, setErr] = useState('');
-
-  useEffect(() => { setRole(role); }, [role, setRole]);
-  useEffect(() => { if (!village && catalog.data?.villages[0]) setVillage(catalog.data.villages[0].name); }, [catalog.data, village]);
-
-  const num = (k: keyof ClinicalProfile) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setProfile((p) => ({ ...p, [k]: e.target.value === '' ? undefined : Number(e.target.value) }));
-  const str = (k: keyof ClinicalProfile) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-    setProfile((p) => ({ ...p, [k]: e.target.value || undefined }));
-
-  const phoneOk = PHONE_RE.test(phone);
-  const canRegister = name.trim().length >= 2 && phoneOk && village && consent && (role !== 'CHILD' || (guardian.trim().length >= 2 && guardianConsent));
-
-  const doRegister = (e: React.FormEvent) => {
-    e.preventDefault(); setErr('');
-    if (!canRegister) return;
-    register.mutate({ data: { patient_type: role, full_name: name.trim(), phone_number: phone, village, consent, channel, profile, ...(role === 'CHILD' ? { guardian_name: guardian.trim(), guardian_consent: guardianConsent } : {}) } }, {
-      onSuccess: (c) => { setChallenge(c); setCode(''); toast({title:'Saved to Database',description:'Demo profile created. Verify your code to open it.'}); },
-      onError: (e) => setErr(errorMessage(e,'Registration could not be confirmed. Reconnect and try again.')),
-    });
-  };
-  const doLogin = (e: React.FormEvent) => {
-    e.preventDefault(); setErr('');
-    sendOtp.mutate({ data: { health_id: hid.trim().toUpperCase(), phone_number: loginPhone, channel } }, {
-      onSuccess: (c) => { setChallenge(c); setCode(''); },
-      onError: (e) => setErr(errorMessage(e,'Could not request a demo code. Try again once online.')),
-    });
-  };
-  const doVerify = (e: React.FormEvent) => {
-    e.preventDefault(); if (!challenge) return; setErr('');
-    verify.mutate({ data: { health_id: challenge.health_id, challenge_id: challenge.challenge_id, code } }, {
-      onSuccess: async (rec) => { await adoptRecord(rec); navigate(rec.visits.length ? '/results' : '/assess'); },
-      onError: (e) => setErr(errorMessage(e,'Verification did not finish. Request a fresh demo code if needed.')),
-    });
-  };
-
-  return (
-    <div className="mx-auto grid max-w-6xl gap-8 px-4 py-8 md:grid-cols-[1fr_1.3fr]">
-      <aside className="rise">
-        <Link href="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground" data-testid="link-back"><ArrowLeft className="h-4 w-4" /> All roles</Link>
-        <p className="font-display mt-6 text-6xl text-primary/25">{ROLE_META[role].hindi}</p>
-        <h1 className="font-display text-4xl font-semibold">{ROLE_META[role].label}</h1>
-        <p className="mt-2 text-foreground/70">{ROLE_META[role].sub}</p>
-        <div className="mt-6 flex gap-3 rounded-2xl border border-[hsl(var(--tier-amber)/.5)] bg-[hsl(var(--secondary)/.18)] p-4 text-sm">
-          <Info className="mt-0.5 h-4 w-4 shrink-0" />
-          <p>Do not enter real names, numbers or health details. Only reserved demo numbers <span className="font-mono">0000000000–0000009999</span> are accepted.</p>
-        </div>
-        <div className="mt-6"><DemoBar /></div>
-      </aside>
-
-      <section className="rise rounded-[2rem] border bg-card p-5 shadow-[0_20px_50px_-30px_hsl(312_52%_30%/.4)] md:p-7" style={{ animationDelay: '.1s' }}>
-        {challenge ? (
-          <form key="verify" onSubmit={doVerify} className="space-y-5">
-            <h2 className="font-display text-2xl font-semibold">Enter the 6-digit code</h2>
-            <div className="rounded-2xl bg-primary p-4 text-primary-foreground">
-              <p className="font-mono text-xs opacity-75">Health ID</p>
-              <p className="font-mono text-2xl tracking-wider" data-testid="text-health-id">{challenge.health_id}</p>
-            </div>
-            {challenge.demo_code && (
-              <button type="button" onClick={() => setCode(challenge.demo_code!)} data-testid="button-use-demo-code" className="press w-full rounded-xl border border-dashed p-3 text-left text-sm hover:bg-muted">
-                Demo helper: code is <span className="font-mono font-semibold">{challenge.demo_code}</span>. Tap to fill.
-              </button>
-            )}
-            <input value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" placeholder="______" data-testid="input-otp"
-              className={cn(field, 'text-center font-mono text-3xl tracking-[.5em]')} />
-            {err && <p className="text-sm text-[hsl(var(--tier-red))]">{err}</p>}
-            <div className="flex gap-2">
-              <button type="button" onClick={() => setChallenge(null)} className="press rounded-xl border px-4" data-testid="button-otp-back">Back</button>
-              <button disabled={code.length !== 6 || verify.isPending || !online} data-testid="button-verify" className="press flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary py-3 font-semibold text-primary-foreground disabled:opacity-40">
-                {verify.isPending && <Loader2 className="h-4 w-4 animate-spin" />} Verify and continue
-              </button>
-            </div>
-          </form>
-        ) : (
-          <>
-            <div className="mb-6 grid grid-cols-2 rounded-2xl bg-muted p-1">
-              {(['new', 'login'] as const).map((t) => (
-                <button key={t} type="button" aria-pressed={tab===t} onClick={() => { setTab(t); setErr(''); }} data-testid={`tab-${t}`}
-                  className={cn('rounded-xl py-2.5 text-sm font-medium transition', tab === t ? 'bg-card shadow-sm' : 'text-muted-foreground')}>
-                  {t === 'new' ? 'New registration' : 'Returning user'}
-                </button>
-              ))}
-            </div>
-            {tab === 'new' ? (
-              <form key="registration" onSubmit={doRegister} className="space-y-4">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <L label="Synthetic alias"><input className={field} value={name} onChange={(e) => setName(e.target.value)} data-testid="input-name" /></L>
-                  <L label="Demo mobile (reserved)"><input className={cn(field, 'font-mono', !phoneOk && 'border-[hsl(var(--tier-red))]')} value={phone} onChange={(e) => setPhone(e.target.value.trim())} data-testid="input-phone" /></L>
-                </div>
-                <L label="Village / block (demo preset)">
-                  <select className={field} value={village} onChange={(e) => setVillage(e.target.value)} data-testid="select-village">
-                    {(catalog.data?.villages ?? []).map((v) => <option key={v.name} value={v.name}>{v.name}</option>)}
-                  </select>
-                </L>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {role === 'CHILD' && <>
-                    <L label="Age (months)"><input type="number" className={field} value={profile.dob_months ?? ''} onChange={num('dob_months')} data-testid="input-dob-months" /></L>
-                    <L label="Birth weight (kg)"><input type="number" step="0.1" className={field} value={profile.birth_weight_kg ?? ''} onChange={num('birth_weight_kg')} data-testid="input-birth-weight" /></L>
-                    <L label="Last recorded weight (kg)"><input type="number" step="0.1" className={field} value={profile.last_weight_kg ?? ''} onChange={num('last_weight_kg')} data-testid="input-last-weight" /></L>
-                  </>}
-                  {role !== 'CHILD' && <L label="Age"><input type="number" className={field} value={profile.age ?? ''} onChange={num('age')} data-testid="input-age" /></L>}
-                  {role === 'PREGNANT_LADY' && <>
-                    <L label="Gestational weeks (or enter LMP)"><input type="number" min="1" max="45" className={field} value={profile.gestational_weeks ?? ''} onChange={num('gestational_weeks')} data-testid="input-gest-weeks" /></L>
-                    <L label="Last menstrual period (optional)"><input type="date" max={new Date().toISOString().slice(0,10)} className={field} value={profile.lmp_date ?? ''} onChange={str('lmp_date')} data-testid="input-lmp" /></L>
-                    <L label="Gravida (pregnancy count)"><input type="number" className={field} value={profile.gravida ?? ''} onChange={num('gravida')} data-testid="input-gravida" /></L>
-                  </>}
-                  {role === 'MOTHER' && <>
-                    <L label="Days since delivery"><input type="number" className={field} value={profile.days_postpartum ?? ''} onChange={num('days_postpartum')} data-testid="input-days-pp" /></L>
-                    <L label="Delivery type">
-                      <select className={field} value={profile.delivery_type ?? 'Normal'} onChange={str('delivery_type')} data-testid="select-delivery-type">
-                        <option value="Normal">Normal</option><option value="C-Section">C-Section</option>
-                      </select>
-                    </L>
-                  </>}
-                  {role !== 'CHILD' && <L label="Blood group">
-                    <select className={field} value={profile.blood_group ?? ''} onChange={str('blood_group')} data-testid="select-blood-group">
-                      <option value="">Unknown</option>{['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'].map((b) => <option key={b}>{b}</option>)}
-                    </select>
-                  </L>}
-                </div>
-                {role === 'CHILD' && (
-                  <div className="space-y-3 rounded-2xl border p-4">
-                    <L label="Guardian alias"><input className={field} value={guardian} onChange={(e) => setGuardian(e.target.value)} data-testid="input-guardian" /></L>
-                    <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={guardianConsent} onChange={(e) => setGuardianConsent(e.target.checked)} className="mt-1 accent-[hsl(var(--primary))]" data-testid="checkbox-guardian-consent" />Guardian consents on the child's behalf.</label>
-                  </div>
-                )}
-                <label className="flex items-start gap-2 rounded-2xl bg-muted/60 p-4 text-sm">
-                  <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-1 accent-[hsl(var(--primary))]" data-testid="checkbox-consent" />
-                  <span>I consent (DPDP Act 2023) to processing of this <b>synthetic</b> profile for demo triage and referral simulation. I can export or erase it anytime.</span>
-                </label>
-                <Channel value={channel} onChange={setChannel} />
-                {err && <p className="text-sm text-[hsl(var(--tier-red))]">{err}</p>}
-                <button disabled={!canRegister || register.isPending || !online} data-testid="button-register" className="press flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-3.5 font-semibold text-primary-foreground disabled:opacity-40">
-                  {register.isPending && <Loader2 className="h-4 w-4 animate-spin" />}{online ? 'Generate Health ID' : 'Registration needs a connection'}
-                </button>
-              </form>
-            ) : (
-              <form key="returning" onSubmit={doLogin} className="space-y-4">
-                <L label="Nourish360 Health ID"><input className={cn(field, 'font-mono uppercase')} placeholder="N360-SNP-1001" value={hid} onChange={(e) => setHid(e.target.value)} data-testid="input-health-id" /></L>
-                <L label="Demo mobile"><input className={cn(field, 'font-mono')} placeholder="0000000001" value={loginPhone} onChange={(e) => setLoginPhone(e.target.value.trim())} data-testid="input-login-phone" /></L>
-                <p className="font-mono text-[11px] text-muted-foreground">Templates: 1001 / 0000000001 · 1002 / 0000000002 · 1003 / 0000000003</p>
-                <Channel value={channel} onChange={setChannel} />
-                {err && <p className="text-sm text-[hsl(var(--tier-red))]">{err}</p>}
-                <button disabled={!/^N360-SNP-[A-Z0-9]{4,8}$/i.test(hid.trim()) || !loginPhone || sendOtp.isPending || !online} data-testid="button-send-otp" className="press flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-3.5 font-semibold text-primary-foreground disabled:opacity-40">
-                  {sendOtp.isPending && <Loader2 className="h-4 w-4 animate-spin" />} Send code
-                </button>
-              </form>
-            )}
-          </>
-        )}
-      </section>
-    </div>
-  );
+export default function Auth(){const {role:slug}=useParams<{role:string}>();const role=slugToRole(slug);return role?<Intake key={role} role={role}/>:<NotFound/>;}
+function Intake({role}:{role:PatientType}){
+ const {setRole,adoptRecord,online}=useApp();const {tr,lang}=useLang();const {toast}=useToast();const [,navigate]=useLocation();
+ const register=useRegisterPatient(),sendOtp=useSendOtp(),verify=useVerifyOtp();
+ const [tab,setTab]=useState<'new'|'login'>('new'),[channel,setChannel]=useState<RegistrationInputChannel>('sms');
+ const sample=SAMPLE[role];const [name,setName]=useState(sample.name),[phone,setPhone]=useState('0000000000'),[village,setVillage]=useState(villages[0]!.name);
+ const [guardian,setGuardian]=useState(sample.guardian??''),[guardianConsent,setGuardianConsent]=useState(false),[consent,setConsent]=useState(false);
+ const [profile,setProfile]=useState<ClinicalProfile>(sample.profile),[hid,setHid]=useState(''),[loginPhone,setLoginPhone]=useState('');
+ const [challenge,setChallenge]=useState<Challenge|null>(null),[code,setCode]=useState(''),[err,setErr]=useState('');
+ const idInput=useRef<HTMLInputElement>(null);
+ useEffect(()=>{setRole(role);},[role,setRole]);
+ const phoneOk=PHONE_RE.test(phone);const canRegister=name.trim().length>=2&&phoneOk&&!!village&&consent&&(role!=='CHILD'||(guardian.trim().length>=2&&guardianConsent));
+ const registerNow=(e:FormEvent)=>{
+  e.preventDefault();setErr('');if(!canRegister||!online)return;
+  register.mutate({data:{patient_type:role,full_name:name.trim(),phone_number:phone,village,consent,channel,profile,...(role==='CHILD'?{guardian_name:guardian.trim(),guardian_consent:guardianConsent}:{})}},{onSuccess:c=>{setChallenge(c);setCode('');toast({title:local(saved,lang),description:tr('Use the demo code to open your profile.','प्रोफ़ाइल खोलने के लिए डेमो कोड भरें।')});},onError:e=>setErr(errorMessage(e,'Registration could not be confirmed. Reconnect and try again.'))});
+ };
+ const loginNow=(e:FormEvent)=>{e.preventDefault();setErr('');if(!online)return;sendOtp.mutate({data:{health_id:hid.trim().toUpperCase(),phone_number:loginPhone,channel}},{onSuccess:c=>{setChallenge(c);setCode('');},onError:e=>setErr(errorMessage(e,'Could not request a demo code. Try again once online.'))});};
+ const verifyNow=(e:FormEvent)=>{e.preventDefault();if(!challenge||!online)return;setErr('');verify.mutate({data:{health_id:challenge.health_id,challenge_id:challenge.challenge_id,code}},{onSuccess:async rec=>{await adoptRecord(rec);navigate(rec.visits.length?'/results':'/assess');},onError:e=>setErr(errorMessage(e,'Verification did not finish. Request a fresh demo code if needed.'))});};
+ const note=tr('Use a made-up name and a demo number only. Never enter real patient details.','सिर्फ काल्पनिक नाम और डेमो नंबर भरें। किसी की असली जानकारी न डालें।');
+ const num=(key:keyof ClinicalProfile,value:string)=>setProfile(p=>({...p,[key]:value===''?undefined:Number(value)}));
+ const fields=(key:keyof ClinicalProfile,label:string,min:number,max:number,step=1,testId=String(key))=><FieldStepper key={key} label={label} value={String(profile[key]??'')} onChange={v=>num(key,v)} {...{min,max,step}} testId={`input-${testId}`}/>;
+ const copy=async()=>{if(!challenge)return;try{await navigator.clipboard.writeText(challenge.health_id);toast({title:tr('Health ID copied','हेल्थ आईडी कॉपी हुई')});}catch{idInput.current?.focus();idInput.current?.select();toast({title:tr('Health ID selected. Use your phone’s copy action.','हेल्थ आईडी चुनी गई है। फ़ोन के कॉपी विकल्प का इस्तेमाल करें।')});}};
+ return <div className="mx-auto grid max-w-6xl items-start gap-5 px-4 py-6 md:grid-cols-[260px_minmax(0,1fr)]">
+  <aside className="space-y-3"><Link href="/" className="tap gap-2" data-testid="link-back"><ArrowLeft size={18}/>{tr('All roles','सभी विकल्प')}</Link><div className="flex items-center gap-3 md:block"><RoleArt role={role} className="size-16 md:size-28"/><h1 className="font-display text-3xl font-bold">{roleLabel(role,lang)}</h1></div><div className="rounded-2xl border bg-accent/70 p-3 text-sm"><p className="flex gap-2"><Info size={18} className="shrink-0"/>{note}</p><div className="mt-2"><Listen text={note}/></div></div></aside>
+  <section className="panel min-w-0 p-4 sm:p-6">
+   {challenge?<form key="verify" onSubmit={verifyNow} className="space-y-4">
+     <h2 className="text-2xl font-bold">{tr('Enter the 6-digit code','6 अंकों का कोड भरें')}</h2>
+     <div className="rounded-2xl border border-primary bg-accent p-4" id="print-health-id"><label htmlFor="copyable-health-id" className="block font-bold">{tr('Demo Health ID','डेमो हेल्थ आईडी')}</label><input ref={idInput} id="copyable-health-id" readOnly value={challenge.health_id} className="w-full bg-transparent font-mono text-xl font-bold text-primary" data-testid="text-health-id"/><div className="mt-2 flex flex-wrap gap-2 print:hidden"><button type="button" onClick={()=>void copy()} className="tap gap-2"><Clipboard size={18}/>{tr('Copy ID','आईडी कॉपी करें')}</button><button type="button" onClick={()=>window.print()} className="tap gap-2"><Printer size={18}/>{tr('Print ID','आईडी प्रिंट करें')}</button></div></div>
+     {challenge.demo_code&&<button type="button" onClick={()=>setCode(challenge.demo_code!)} className="tap w-full gap-2 border-dashed text-start" data-testid="button-use-demo-code">{tr('Fill demo code','डेमो कोड भरें')} <strong className="font-mono">{challenge.demo_code}</strong></button>}
+     <label className="block font-bold">{tr('Demo code','डेमो कोड')}<input value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,'').slice(0,6))} inputMode="numeric" autoComplete="off" placeholder="······" data-testid="input-otp" className="field mt-2 w-full text-center font-mono text-xl tracking-widest"/></label>
+     {err&&<p role="alert" className="font-semibold text-red-800">{localizeMessage(err,lang)}</p>}
+     <div className="flex flex-wrap gap-2"><button type="button" onClick={()=>{setChallenge(null);setErr('');}} className="tap" data-testid="button-otp-back">{tr('Back','वापस')}</button><button disabled={code.length!==6||verify.isPending||!online} className="tap tap-primary flex-1 gap-2" data-testid="button-verify">{verify.isPending&&<Loader2 size={18} className="animate-spin"/>}{tr('Verify and continue','कोड जाँचें और आगे बढ़ें')}</button></div>
+   </form>:<>
+    <div className="mb-5 grid grid-cols-2 gap-2" aria-label={tr('Profile options','प्रोफ़ाइल के विकल्प')}>{(['new','login'] as const).map(t=><button key={t} type="button" aria-pressed={tab===t} onClick={()=>{setTab(t);setErr('');}} data-testid={`tab-${t}`} className={chip(tab===t)}>{t==='new'?tr('New registration','नई प्रोफ़ाइल'):tr('Returning user','पुरानी प्रोफ़ाइल')}</button>)}</div>
+    {tab==='new'?<form key="registration" onSubmit={registerNow} className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-2"><label className="font-bold">{tr('Demo name','काल्पनिक नाम')}<input value={name} onChange={e=>setName(e.target.value)} maxLength={100} className="field mt-2 w-full" data-testid="input-name"/></label><label className="font-bold">{tr('Demo mobile','डेमो मोबाइल')}<input value={phone} onChange={e=>setPhone(e.target.value.trim())} inputMode="tel" maxLength={13} className="field mt-2 w-full font-mono" data-testid="input-phone"/>{!phoneOk&&<span className="block text-sm text-red-800">{tr('Use a reserved demo number like 0000000000.','0000000000 जैसा डेमो नंबर भरें।')}</span>}</label></div>
+      <fieldset><legend className="mb-2 font-bold">{tr('Village','गाँव')}</legend><div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{villages.map(v=><button key={v.name} type="button" className={chip(village===v.name)} aria-pressed={village===v.name} onClick={()=>setVillage(v.name)} data-testid={`button-intake-village-${v.name}`}>{villageName(v.name,lang)}</button>)}</div></fieldset>
+      <div className="grid gap-3 sm:grid-cols-2">{role==='CHILD'?<>{fields('dob_months',tr('Age in months','उम्र (महीने)'),0,60,1,'dob-months')}{fields('birth_weight_kg',tr('Birth weight (kg)','जन्म का वज़न (किलो)'),.2,10,.1,'birth-weight')}{fields('last_weight_kg',tr('Last weight (kg)','पिछला वज़न (किलो)'),.2,50,.1,'last-weight')}</>:fields('age',tr('Age in years','उम्र (साल)'),12,65)}</div>
+      {role==='PREGNANT_LADY'&&<div className="space-y-3"><label className="block rounded-2xl border bg-white p-4 font-bold">{tr('Pregnancy weeks','गर्भ के हफ़्ते')} <output htmlFor="pregnancy-weeks" className="ml-1 rounded-lg bg-accent px-2 text-primary">{profile.gestational_weeks??26}</output><input type="range" min={1} max={45} value={profile.gestational_weeks??26} onChange={e=>num('gestational_weeks',e.target.value)} id="pregnancy-weeks" data-testid="input-gest-weeks" className="block h-[52px] w-full accent-primary"/></label><fieldset><legend className="mb-2 font-bold">{tr('Pregnancy count','कितनी बार गर्भ रहा')}</legend><div className="grid grid-cols-3 gap-2">{[1,2,3].map(n=>{const active=n===3?(profile.gravida??1)>=3:profile.gravida===n;return <button key={n} type="button" className={chip(active)} aria-pressed={active} onClick={()=>num('gravida',String(n))}>{n===1?tr('First','पहली'):n===2?tr('Second','दूसरी'):tr('Third or later','तीसरी या अधिक')}</button>;})}</div></fieldset>{(profile.gravida??0)>=3&&fields('gravida',tr('Exact count','सही संख्या'),3,25,1,'gravida')}</div>}
+      {role==='MOTHER'&&<>{fields('days_postpartum',tr('Days since birth','प्रसव के बाद के दिन'),0,730,1,'days-pp')}<fieldset><legend className="mb-2 font-bold">{tr('Delivery type','प्रसव का तरीका')}</legend><div className="grid grid-cols-2 gap-2">{(['Normal','C-Section'] as const).map(d=><button key={d} type="button" className={chip(profile.delivery_type===d)} aria-pressed={profile.delivery_type===d} onClick={()=>setProfile(p=>({...p,delivery_type:d}))}>{d==='Normal'?tr('Vaginal','सामान्य प्रसव'):tr('C-section','ऑपरेशन से प्रसव')}</button>)}</div></fieldset></>}
+      {role!=='CHILD'&&<fieldset><legend className="mb-2 font-bold">{tr('Blood group','खून का ग्रुप')}</legend><div className="grid grid-cols-3 gap-2 sm:grid-cols-5">{['A+','A-','B+','B-','O+','O-','AB+','AB-','Unknown'].map(g=><button key={g} type="button" className={chip(profile.blood_group===g)} aria-pressed={profile.blood_group===g} onClick={()=>setProfile(p=>({...p,blood_group:g}))}>{g==='Unknown'?tr('Not known','पता नहीं'):g}</button>)}</div></fieldset>}
+      {role==='CHILD'&&<div className="rounded-2xl border p-3"><label className="font-bold">{tr('Guardian demo name','अभिभावक का काल्पनिक नाम')}<input className="field mt-2 w-full" value={guardian} onChange={e=>setGuardian(e.target.value)} data-testid="input-guardian"/></label><label className="mt-2 flex min-h-[52px] items-center gap-3"><input type="checkbox" className="size-6 shrink-0 accent-primary" checked={guardianConsent} onChange={e=>setGuardianConsent(e.target.checked)} data-testid="checkbox-guardian-consent"/>{tr('I agree on behalf of the child.','मैं बच्चे की ओर से सहमति देता/देती हूँ।')}</label></div>}
+      <label className="flex min-h-[52px] items-center gap-3 rounded-2xl border bg-accent p-3"><input type="checkbox" className="size-6 shrink-0 accent-primary" checked={consent} onChange={e=>setConsent(e.target.checked)} data-testid="checkbox-consent"/>{tr('I agree to save this demo data. I can download or delete it later.','मैं यह डेमो जानकारी सहेजने की सहमति देता/देती हूँ। बाद में इसे डाउनलोड या मिटा सकता/सकती हूँ।')}</label>
+      <Channel value={channel} onChange={setChannel}/>{err&&<p role="alert" className="font-semibold text-red-800">{localizeMessage(err,lang)}</p>}
+      <button disabled={!canRegister||register.isPending||!online} className="tap tap-primary w-full gap-2" data-testid="button-register">{register.isPending&&<Loader2 size={18} className="animate-spin"/>}{online?tr('Generate Health ID','हेल्थ आईडी बनाएँ'):tr('Connect to create an ID','आईडी बनाने के लिए नेटवर्क जोड़ें')}</button>
+    </form>:<form key="returning" onSubmit={loginNow} className="space-y-4">
+      <label className="block font-bold">{tr('Health ID','हेल्थ आईडी')}<input className="field mt-2 block w-full font-mono uppercase" placeholder="N360-SNP-1001" value={hid} onChange={e=>setHid(e.target.value)} data-testid="input-health-id"/></label>
+      <label className="block font-bold">{tr('Demo mobile','डेमो मोबाइल')}<input className="field mt-2 block w-full font-mono" inputMode="tel" placeholder="0000000001" value={loginPhone} onChange={e=>setLoginPhone(e.target.value.trim())} data-testid="input-login-phone"/></label>
+      <p className="text-sm text-muted-foreground">{tr('Templates','डेमो आईडी और नंबर')}: 1001 / 0000000001 · 1002 / 0000000002 · 1003 / 0000000003</p><Channel value={channel} onChange={setChannel}/>{err&&<p role="alert" className="font-semibold text-red-800">{localizeMessage(err,lang)}</p>}
+      <button disabled={!/^N360-SNP-[A-Z0-9]{4,8}$/i.test(hid.trim())||!PHONE_RE.test(loginPhone)||sendOtp.isPending||!online} className="tap tap-primary w-full gap-2" data-testid="button-send-otp">{sendOtp.isPending&&<Loader2 size={18} className="animate-spin"/>}{online?tr('Send code','कोड लें'):tr('Connect for a new code','कोड लेने के लिए नेटवर्क जोड़ें')}</button>
+    </form>}
+   </>}
+  </section>
+ </div>;
 }

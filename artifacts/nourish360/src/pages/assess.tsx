@@ -1,147 +1,58 @@
-import { useEffect, useRef, useState } from 'react';
-import { Link, useLocation } from 'wouter';
-import { CloudOff, Loader2 } from 'lucide-react';
-import type { AssessmentInput, PatientType, Vitals } from '@workspace/api-client-react';
-import { useApp, ROLE_META } from '@/lib/store';
-import { cn } from '@/lib/utils';
-import { clearDraft, readDraft, saveDraft } from '@/lib/offline';
+import { useEffect,useRef,useState } from 'react';
+import { Link,useLocation } from 'wouter';
+import { Activity,Baby,CloudOff,Droplets,Eye,HeartPulse,Loader2,Stethoscope,Thermometer,TriangleAlert,WandSparkles } from 'lucide-react';
+import type { AssessmentInput,Vitals } from '@workspace/api-client-react';
+import { useApp } from '@/lib/store';
+import { clearDraft,readDraft,saveDraft } from '@/lib/offline';
 import { useToast } from '@/hooks/use-toast';
+import { local,localizeMessage,offlineSaved,roleLabel,saved,useLang,villageName } from '@/lib/i18n';
+import { emergencySample,muacApplicable,signKeys,signText,symptomWire,units,vitalFields,vitalLabels,vitalRanges,type SignKey } from '@/lib/checkup-copy';
+import { FieldStepper } from '@/components/field-stepper';
+import { BreathCounter } from '@/components/breath-counter';
+import { Listen } from '@/components/listen';
 
-type VField = { key: keyof Vitals; label: string; unit: string; step?: string };
-const VITALS: Record<PatientType, VField[]> = {
-  CHILD: [
-    { key: 'resp_rate', label: 'Breaths per minute', unit: '/min' },
-    { key: 'temp_c', label: 'Temperature', unit: '°C', step: '0.1' },
-    { key: 'muac_cm', label: 'MUAC', unit: 'cm', step: '0.1' },
-    { key: 'weight_kg', label: 'Current weight', unit: 'kg', step: '0.1' },
-  ],
-  PREGNANT_LADY: [
-    { key: 'bp_sys', label: 'BP systolic', unit: 'mmHg' },
-    { key: 'bp_dia', label: 'BP diastolic', unit: 'mmHg' },
-    { key: 'hb', label: 'Haemoglobin', unit: 'g/dL', step: '0.1' },
-    { key: 'weight_kg', label: 'Current weight', unit: 'kg', step: '0.1' },
-  ],
-  MOTHER: [
-    { key: 'bp_sys', label: 'BP systolic', unit: 'mmHg' },
-    { key: 'bp_dia', label: 'BP diastolic', unit: 'mmHg' },
-    { key: 'hb', label: 'Haemoglobin', unit: 'g/dL', step: '0.1' },
-    { key: 'temp_c', label: 'Temperature', unit: '°C', step: '0.1' },
-  ],
-};
-export const SYMPTOMS: Record<PatientType, string[]> = {
-  CHILD: ['Fast or difficult breathing', 'High fever', 'Cold body', 'Unable to drink or breastfeed', 'Vomiting everything', 'Lethargic or unconscious', 'Umbilical redness or pus'],
-  PREGNANT_LADY: ['Severe headache', 'Blurred vision or flashes', 'Sudden swelling of face or hands', 'Vaginal bleeding', 'Reduced or absent fetal movement', 'Severe abdominal pain'],
-  MOTHER: ['Soaking more than one pad per hour', 'High fever or chills', 'Foul-smelling discharge', 'Severe dizziness or fainting', 'Breast engorgement or pain'],
-};
-export default function Assess() {
-  const { record, submitAssessment, online, ready, syncing } = useApp();
-  const [, navigate] = useLocation();
-  const role = record?.patient.patient_type;
-  const [vitals, setVitals] = useState<Record<string, string>>({});
-  const [symptoms, setSymptoms] = useState<string[]>([]);
-  const [busy, setBusy] = useState(false);
-  const [loaded, setLoaded] = useState<string | null>(null);
-  const [error, setError] = useState('');
-  const submitted = useRef(false);
-  const attempted = useRef<{key:string;input:AssessmentInput} | null>(null);
-  const {toast} = useToast();
-  const healthId = record?.patient.health_id;
+const icons={breath:Activity,chest:Activity,fever:Thermometer,cold:Thermometer,feed:Baby,vomit:TriangleAlert,drowsy:HeartPulse,navel:Droplets,head:TriangleAlert,vision:Eye,swelling:Activity,blood:Droplets,movement:Baby,pain:HeartPulse,pad:Droplets,chills:Thermometer,discharge:Droplets,faint:TriangleAlert,breast:HeartPulse} satisfies Record<SignKey,typeof Activity>;
 
-  useEffect(() => {
-    if (!healthId) return;
-    let active = true;
-    submitted.current = false;
-    void readDraft(healthId).catch(() => undefined).then(d => {
-      if (!active) return;
-      setVitals(d?.vitals ?? {});
-      setSymptoms(d?.symptoms ?? []);
-      attempted.current = d?.attempt ?? null;
-      setLoaded(healthId);
-    });
-    return () => { active = false; };
-  }, [healthId]);
-  useEffect(() => {
-    if (!healthId || loaded !== healthId || submitted.current || busy) return;
-    void saveDraft(healthId,vitals,symptoms,attempted.current ?? undefined).catch(() => undefined);
-  }, [vitals, symptoms, healthId, loaded, busy]);
-
-  if (!ready || (healthId && loaded !== healthId)) return <div className="mx-auto max-w-3xl space-y-3 px-4 py-10">{[0, 1, 2].map((i) => <div key={i} className="h-24 animate-pulse rounded-3xl bg-muted" />)}</div>;
-  if (!record || !role) return (
-    <div className="mx-auto max-w-md px-4 py-20 text-center">
-      <div className="phulkari mx-auto mb-6 h-20 w-20 rounded-3xl" />
-      <h1 className="font-display text-3xl font-semibold">No one selected yet</h1>
-      <p className="mt-2 text-muted-foreground">Register a synthetic profile or load a demo case first.</p>
-      <Link href="/" className="press mt-6 inline-block rounded-full bg-primary px-5 py-3 font-semibold text-primary-foreground" data-testid="link-choose-role">Choose a role</Link>
-    </div>
-  );
-
-  const toggle = (s: string) => setSymptoms((p) => (p.includes(s) ? p.filter((x) => x !== s) : [...p, s]));
-  const submit = async () => {
-    setError('');
-    setBusy(true);
-    const v: Vitals = {};
-    for (const f of VITALS[role]) if (vitals[f.key]) v[f.key] = Number(vitals[f.key]);
-    try {
-      const key = JSON.stringify([record.patient.health_id,v,symptoms]);
-      if (attempted.current?.key!==key) attempted.current={key,input:{ mutation_id:crypto.randomUUID(),vitals:v,symptoms,recorded_at:new Date().toISOString() }};
-      await saveDraft(record.patient.health_id,vitals,symptoms,attempted.current).catch(()=>undefined);
-      const {offline} = await submitAssessment(attempted.current.input);
-      submitted.current = true;
-      await clearDraft(record.patient.health_id).catch(() => undefined);
-      toast({title:offline ? 'Saved Offline — Will Sync Automatically' : 'Saved to Database'});
-      navigate('/results');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save this demo assessment.');
-    } finally { setBusy(false); }
+export default function Assess(){
+  const {record,submitAssessment,online,ready,syncing}=useApp();const {lang,tr}=useLang();const {toast}=useToast();const [,navigate]=useLocation();
+  const [vitals,setVitals]=useState<Record<string,string>>({});const [symptoms,setSymptoms]=useState<string[]>([]);
+  const [busy,setBusy]=useState(false);const [loaded,setLoaded]=useState<string>();const [error,setError]=useState('');
+  const submitted=useRef(false);const attempted=useRef<{key:string;input:AssessmentInput}|null>(null);
+  const healthId=record?.patient.health_id;
+  useEffect(()=>{
+    if(!healthId)return;let active=true;submitted.current=false;setError('');
+    void readDraft(healthId).catch(()=>undefined).then(d=>{if(!active)return;setVitals(d?.vitals??{});setSymptoms(d?.symptoms??[]);attempted.current=d?.attempt??null;setLoaded(healthId);});
+    return()=>{active=false;};
+  },[healthId]);
+  useEffect(()=>{if(healthId&&loaded===healthId&&!submitted.current&&!busy)void saveDraft(healthId,vitals,symptoms,attempted.current??undefined).catch(()=>undefined);},[vitals,symptoms,healthId,loaded,busy]);
+  if(!ready||(healthId&&loaded!==healthId))return <div className="mx-auto max-w-3xl animate-pulse px-4 py-10"><div className="h-60 rounded-3xl bg-muted"/></div>;
+  if(!record||!healthId)return <section className="mx-auto max-w-lg px-4 py-12"><div className="panel p-6"><h1 className="text-2xl font-bold">{tr('Open a demo profile first','पहले डेमो प्रोफ़ाइल खोलें')}</h1><Link href="/" data-testid="link-choose-role" className="tap tap-primary mt-4">{tr('Choose a role','किसकी जाँच है?')}</Link></div></section>;
+  const role=record.patient.patient_type;
+  const hasMuac=role==='CHILD'&&muacApplicable(record.patient.profile.dob_months);
+  const fields=vitalFields[role].filter(k=>k!=='muac_cm'||hasMuac);
+  const muac=vitals.muac_cm===''||vitals.muac_cm===undefined?undefined:Number(vitals.muac_cm);
+  const how=tr('Fill the measurements you have, then choose any signs you noticed. This is practice, not a diagnosis.','जो माप लिए हैं, उन्हें भरें। जो लक्षण दिखे, उन्हें चुनें। यह सिर्फ अभ्यास है, बीमारी की पहचान नहीं।');
+  const change=(key:keyof Vitals,value:string)=>setVitals(v=>({...v,[key]:value}));
+  const submit=async()=>{
+    setError('');setBusy(true);const measured:Vitals={};
+    for(const key of fields)if(vitals[key]?.trim())measured[key]=Number(vitals[key]);
+    try{
+      const key=JSON.stringify([healthId,measured,symptoms]);
+      if(attempted.current?.key!==key)attempted.current={key,input:{mutation_id:crypto.randomUUID(),vitals:measured,symptoms,recorded_at:new Date().toISOString()}};
+      await saveDraft(healthId,vitals,symptoms,attempted.current).catch(()=>undefined);
+      const {offline}=await submitAssessment(attempted.current.input);submitted.current=true;await clearDraft(healthId).catch(()=>undefined);
+      toast({title:local(offline?offlineSaved:saved,lang)});navigate('/results');
+    }catch(e){setError(e instanceof Error?e.message:'The assessment could not be saved.');}finally{setBusy(false);}
   };
-  const any = symptoms.length > 0 || Object.values(vitals).some(Boolean);
-
-  return (
-    <div className="mx-auto max-w-3xl px-4 py-8">
-      <p className="font-mono text-xs uppercase tracking-[.2em] text-muted-foreground">{ROLE_META[role].label} · visit {record.visits.length + 1}</p>
-      <h1 className="font-display mt-1 text-4xl font-semibold" data-testid="text-patient-name">{record.patient.full_name}</h1>
-      <p className="font-mono text-xs text-muted-foreground">{record.patient.health_id} · {record.patient.village}</p>
-
-      <section className="rise mt-8 rounded-[2rem] border bg-card p-5 md:p-6">
-        <h2 className="font-display text-xl font-semibold">Measurements</h2>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          {VITALS[role].map((f) => (
-            <label key={f.key} className="group rounded-2xl border bg-background p-3 transition focus-within:border-primary">
-              <span className="text-xs text-muted-foreground">{f.label}</span>
-              <span className="flex items-baseline gap-2">
-                <input type="number" step={f.step ?? '1'} inputMode="decimal" value={vitals[f.key] ?? ''} onChange={(e) => setVitals((p) => ({ ...p, [f.key]: e.target.value }))}
-                  className="w-full bg-transparent font-mono text-2xl outline-none" placeholder="--" data-testid={`input-vital-${f.key}`} />
-                <span className="font-mono text-xs text-muted-foreground">{f.unit}</span>
-              </span>
-            </label>
-          ))}
-        </div>
-      </section>
-
-      <section className="rise mt-5 rounded-[2rem] border bg-card p-5 md:p-6" style={{ animationDelay: '.08s' }}>
-        <h2 className="font-display text-xl font-semibold">Danger signs seen today</h2>
-        <div className="mt-4 flex flex-wrap gap-2">
-          {SYMPTOMS[role].map((s) => {
-            const on = symptoms.includes(s);
-            return (
-              <button key={s} onClick={() => toggle(s)} aria-pressed={on} data-testid={`chip-symptom-${s}`}
-                className={cn('press rounded-full border px-4 py-2 text-sm transition-colors', on ? 'border-primary bg-primary text-primary-foreground' : 'bg-background hover:border-primary/50')}>
-                {s}
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      <div className="sticky bottom-4 mt-6 rounded-[1.5rem] border bg-card/95 p-3 shadow-lg backdrop-blur">
-        {error && <p role="alert" className="mb-2 text-sm text-red-700">{error}</p>}
-        <button onClick={submit} disabled={!any || busy || syncing} data-testid="button-analyse"
-          className="press flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-4 font-semibold text-primary-foreground disabled:opacity-40">
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : !online && <CloudOff className="h-4 w-4" />}
-          {online ? 'Analyse visit' : 'Analyse on this device (will sync later)'}
-        </button>
-        <p className="mt-2 text-center text-[11px] text-muted-foreground">Draft saved on this device. Rule-based demo output, not a diagnosis.</p>
-      </div>
-    </div>
-  );
+  const fill=()=>{const s=emergencySample[role];setVitals(Object.fromEntries(Object.entries(s.vitals).map(([k,v])=>[k,String(v)])));setSymptoms([symptomWire(s.sign)]);setError('');};
+  return <div className="mx-auto max-w-4xl space-y-5 px-4 py-6">
+    <header><p className="text-sm font-bold text-primary">{roleLabel(role,lang)} · {tr('Visit','जाँच')} {record.visits.length+1}</p><h1 className="font-display mt-2 text-3xl font-bold" data-testid="text-patient-name">{record.patient.full_name}</h1><p className="mt-1 text-sm text-muted-foreground">{healthId} · {villageName(record.patient.village,lang)}</p><div className="mt-3 flex flex-wrap gap-2"><Listen text={how}/><button type="button" data-testid="button-sample-emergency" onClick={fill} className="tap gap-2"><WandSparkles size={18}/>{tr('Fill emergency example','इमरजेंसी का उदाहरण भरें')}</button></div></header>
+    <section className="panel p-4 sm:p-6"><h2 className="flex items-center gap-2 text-xl font-bold"><Stethoscope size={21} className="text-primary"/>{tr('Measurements','माप')}</h2><p className="my-2 text-sm text-muted-foreground">{how}</p>
+      <div className="grid gap-3 sm:grid-cols-2">{fields.map(key=>{const [min,max,step,start]=vitalRanges[key];return <FieldStepper key={key} label={local(vitalLabels[key],lang)} unit={local(units[key],lang)} value={vitals[key]??''} onChange={v=>change(key,v)} {...{min,max,step,start}} testId={`input-vital-${key}`}/>;})}</div>
+      {role==='CHILD'&&<BreathCounter onUse={n=>change('resp_rate',String(n))}/>}
+      {hasMuac&&<aside className="mt-3 rounded-2xl border bg-background p-3" data-testid="panel-muac-bands"><p className="text-sm font-bold">{tr('Practice MUAC bands · 6–59 months only','बाँह की गोलाई का अभ्यास · सिर्फ 6–59 महीने')}</p><div className="mt-2 grid grid-cols-3 gap-1 text-center text-xs font-bold"><span className="rounded-lg border-b-4 border-[#DC2626] bg-red-50 p-2">&lt;11.5</span><span className="rounded-lg border-b-4 border-[#D97706] bg-amber-50 p-2">11.5–12.4</span><span className="rounded-lg border-b-4 border-[#16A34A] bg-green-50 p-2">≥12.5</span></div>{muac!==undefined&&muac>=3&&muac<=65&&<p className="mt-2 text-sm">{tr('Example band:','अभ्यास का स्तर:')} {muac<11.5?tr('Red','लाल'):muac<12.5?tr('Amber','पीला'):tr('Green','हरा')}</p>}</aside>}
+    </section>
+    <section className="panel p-4 sm:p-6"><h2 className="text-xl font-bold">{tr('Signs noticed today','आज दिखे लक्षण')}</h2><div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">{signKeys[role].map(key=>{const wire=symptomWire(key),on=symptoms.includes(wire),Icon=icons[key];return <button type="button" key={key} onClick={()=>setSymptoms(s=>on?s.filter(x=>x!==wire):[...s,wire])} aria-pressed={on} data-testid={`chip-symptom-${wire}`} className={`flex min-h-[52px] items-center gap-3 rounded-xl border-2 p-3 text-left font-bold ${on?'border-primary bg-accent text-primary':'border-border bg-white'}`}><Icon size={22} className="shrink-0"/>{signText(key,lang)}{on&&<span className="ml-auto" aria-hidden="true">✓</span>}</button>;})}</div></section>
+    <div className="panel p-3"><div role="alert" className={error?'mb-2 text-sm font-bold text-red-800':'hidden'}>{localizeMessage(error,lang)}</div><button type="button" onClick={()=>void submit()} disabled={(!symptoms.length&&!fields.some(k=>vitals[k]))||busy||syncing} data-testid="button-analyse" className="tap tap-primary w-full gap-2">{busy?<Loader2 className="animate-spin" size={18}/>:!online?<CloudOff size={18}/>:null}{online?tr('Analyse visit','जाँच का नतीजा देखें'):tr('Save offline and see result','फ़ोन पर सहेजें और नतीजा देखें')}</button></div>
+  </div>;
 }

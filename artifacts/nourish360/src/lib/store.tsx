@@ -11,6 +11,7 @@ import {
 import { acknowledgeOffline, analyzeOffline, clearOffline, readOffline, readPending, rememberVerification, saveOffline, sharedRecordKey, verifiedOfflineId } from '@/lib/offline';
 import { validateAssessment } from '@workspace/nourish-logic';
 import { useToast } from '@/hooks/use-toast';
+import { local,saved as savedLabel,useLang } from '@/lib/i18n';
 
 export type EmergencyPrefill = { patient_type?: PatientType; emergency_type?: string; village?: string };
 
@@ -18,6 +19,8 @@ type Ctx = {
   record: PatientRecord | null;
   queue: AssessmentInput[];
   online: boolean;
+  forcedOffline: boolean;
+  toggleOffline: () => void;
   syncing: boolean;
   syncError: string;
   ready: boolean;
@@ -37,6 +40,8 @@ type Ctx = {
 
 const AppCtx = createContext<Ctx | null>(null);
 const ROLE_KEY = 'n360.role';
+const OFFLINE_KEY = 'n360.demo-offline';
+function initialOffline(){try{return sessionStorage.getItem(OFFLINE_KEY)==='true';}catch{return false;}}
 
 const sortVisits = (visits:Visit[]) => visits.sort((a,b)=>a.created_at.localeCompare(b.created_at));
 function mergePending(record:PatientRecord,pending:Awaited<ReturnType<typeof readPending>>) {
@@ -52,7 +57,10 @@ export function errorMessage(error:unknown,fallback:string) {
 export function AppProvider({ children }: { children: ReactNode }) {
   const [record, setRecord] = useState<PatientRecord | null>(null);
   const [queue, setQueue] = useState<AssessmentInput[]>([]);
-  const [online, setOnline] = useState(typeof navigator === 'undefined' ? true : navigator.onLine);
+  const [physicalOnline, setOnline] = useState(typeof navigator === 'undefined' ? true : navigator.onLine);
+  const [forcedOffline,setForcedOffline]=useState(initialOffline);
+  const offlineRef=useRef(forcedOffline);
+  const online=physicalOnline&&!forcedOffline;
   const [syncing, setSyncing] = useState(false);
   const [ready, setReady] = useState(false);
   const [role, setRoleState] = useState<PatientType | null>(() => (localStorage.getItem(ROLE_KEY) as PatientType | null) ?? null);
@@ -61,6 +69,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const [syncError,setSyncError] = useState('');
   const {toast} = useToast();
+  const {lang}=useLang();
+  const langRef=useRef(lang);
+  langRef.current=lang;
   const recRef = useRef<PatientRecord | null>(null);
   const revision = useRef(0);
   const syncingRef = useRef(false);
@@ -105,7 +116,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const syncNow = useCallback(async () => {
     const rec = recRef.current;
-    if (!rec || !navigator.onLine || syncingRef.current || submittingRef.current) return;
+    if (!rec || !navigator.onLine || offlineRef.current || syncingRef.current || submittingRef.current) return;
     const id = rec.patient.health_id;
     const rev = revision.current;
     const current = () => revision.current===rev && recRef.current?.patient.health_id === id;
@@ -119,7 +130,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       rememberVerification(id);
       let pending = await readPending(id);
       let saved = false;
-      while (current() && pending.length) {
+      while (current() && !offlineRef.current && navigator.onLine && pending.length) {
         const res = await syncVisits({ visits: pending.slice(0, 50).map(p=>p.input) }, req());
         if (!current()) return;
         if (!res.synced_ids.length) throw new Error('No offline assessments were acknowledged.');
@@ -135,7 +146,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       await saveOffline(fresh);
       if (!current()) return;
       update(mergePending(fresh,pending),pending.map(p=>p.input));
-      if (saved) toast({title:'Saved to Database',description:'Your offline assessments are synced.'});
+      if (saved) toast({title:local(savedLabel,langRef.current),description:local(['Offline assessments synced.','ऑफ़लाइन जाँचें भेज दी गईं।'],langRef.current)});
     } catch (error) {
       if (!current()) return;
       const status=(error as {status?:number})?.status;
@@ -165,7 +176,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     (async () => {
       try {
-        if (navigator.onLine) {
+        if (navigator.onLine && !offlineRef.current) {
           const session = await getSession({signal:AbortSignal.timeout(6000)});
           if (alive && revision.current===rev) await adoptRecord(session);
         } else await reopenOffline();
@@ -221,7 +232,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const pending = await readPending(id).catch(() => []);
       if (!current()) throw new Error('The active profile changed.');
-      if (navigator.onLine && !pending.length) {
+      if (navigator.onLine && !offlineRef.current && !pending.length) {
         try {
           const visit = await analyzeVisit(input,{headers:{'x-nourish-record':id},signal:AbortSignal.timeout(6500)});
           if (!current()) throw new Error('The active profile changed.');
@@ -260,9 +271,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const openEmergency = useCallback((p?: EmergencyPrefill) => { setPrefill(p ?? {}); setEmergencyOpen(true); }, []);
   const closeEmergency = useCallback(() => setEmergencyOpen(false), []);
+  const toggleOffline=useCallback(()=>{
+    const next=!offlineRef.current;
+    offlineRef.current=next;
+    setForcedOffline(next);
+    try { sessionStorage.setItem(OFFLINE_KEY,String(next)); } catch { /* stays active in memory */ }
+    if (next || !navigator.onLine) return;
+    if (recRef.current) { void syncNow();return; }
+    const rev=revision.current;
+    void getSession({signal:AbortSignal.timeout(6000)}).then(r=>{
+      if(revision.current===rev&&!offlineRef.current) return adoptRecord(r);
+      return undefined;
+    }).catch(()=>undefined);
+  },[adoptRecord,syncNow]);
 
   return (
-    <AppCtx.Provider value={{ record, queue, online, syncing, syncError, ready, role, setRole, adoptRecord, submitAssessment, syncNow, forgetLocal, emergencyOpen, emergencyPrefill, openEmergency, closeEmergency, privacyOpen, setPrivacyOpen }}>
+    <AppCtx.Provider value={{ record, queue, online, forcedOffline,toggleOffline,syncing, syncError, ready, role, setRole, adoptRecord, submitAssessment, syncNow, forgetLocal, emergencyOpen, emergencyPrefill, openEmergency, closeEmergency, privacyOpen, setPrivacyOpen }}>
       {children}
     </AppCtx.Provider>
   );

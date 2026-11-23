@@ -1,21 +1,22 @@
-# Nourish360
+# Notion360
 
-Nourish360 is a **synthetic demonstration** of maternal, postpartum, and child health workflows in Sonipat. Do not enter real patient details. For real emergencies, call 108 directly; no action in the app dispatches an ambulance.
+Notion360 is a **synthetic demonstration** of maternal, postpartum, and child health workflows in Sonipat. Do not enter real patient details. For real emergencies, call 108 directly; no action in the app dispatches an ambulance.
 
 ## Try the demo
 
 - Choose a **Demo quick-fill** case to open an isolated, editable copy with three visits: `N360-SNP-1001` (Aarav, child / green), `N360-SNP-1002` (Meena, pregnant / amber), or `N360-SNP-1003` (Sunita, postpartum / red). Use the copy’s own Health ID to return to the same history.
 - Or choose a role, register with an invented name and a fictional number such as `0000000000`, grant consent, and use the displayed demo OTP. No SMS or call is sent. Returning-user examples are listed in the login tab.
-- Open a demo profile online before going offline. In an offline-capable browser, the cached app shell, synthetic record, draft, and assessment rules remain available without a connection. Queued visits retry while the app is open and when it reconnects. Registration, authentication, exports, erasure, tele-review logging, and starting a new ambulance drill need a connection.
+- Use the header’s **English | हिंदी** switch without changing recorded inputs. **Listen** uses an installed device voice; no synthetic record is sent to translation or speech services.
+- Use the **Demo offline** header switch to exercise the same IndexedDB save/sync path without changing the device’s connection. Open a demo profile online before going offline. In an offline-capable browser, the cached app shell, synthetic record, draft, and assessment rules remain available without a connection. Queued visits retry while the app is open and when it reconnects. Registration, authentication, exports, erasure, tele-review logging, and starting a new ambulance drill need a connection.
 - The **Ambulance drill** uses fixed demonstration pickup points and a synthetic route, not live GPS or hospital availability. Map tiles need connectivity. The role-specific emergency checklist remains available offline. No family calls, clinic appointments, or bookings are sent to a provider.
 - **DPDP controls** exports the synthetic record as JSON, signs out and clears the current snapshot and draft, or permanently erases the synthetic profile and visits. Sign-out does not discard unsynced assessments; sign back into the same profile to sync them. Erasure also clears that profile’s queue and drills, and de-identifies the revoked consent entry. The audit trail is not tamper-proof.
 
 ## Run and maintain
 
-- Run the Nourish360 web and API Server managed workflows together. The API uses the managed PostgreSQL database and the workspace `SESSION_SECRET` for cookie signing.
+- Run the Notion360 web and API Server managed workflows together. The API uses the managed PostgreSQL database and the workspace `SESSION_SECRET` for cookie signing.
 - `pnpm --filter @workspace/db run push` applies schema changes to the **development** database. The API seeds the template cases and demonstration facilities on startup. Managed production schema changes go through Publish, not API startup.
 - `pnpm --filter @workspace/api-spec run codegen` regenerates React API helpers and request/response schemas after editing the API contract.
-- `pnpm --filter @workspace/nourish360 --filter @workspace/api-server run typecheck` checks both Nourish360 services after library types have been built with `pnpm run typecheck:libs`.
+- `pnpm --filter @workspace/nourish360 --filter @workspace/api-server run typecheck` checks both Notion360 services after library types have been built with `pnpm run typecheck:libs`.
 - `artifacts/nourish360/src` contains the web workflow, `artifacts/api-server/src` the backend, `lib/db/src/schema` the database schema, and `lib/nourish-logic` the deterministic evaluator and capability-selection logic shared online and offline. Use the shared evaluator when revising rules so offline and server behavior remain consistent.
 
 ## Before any clinical pilot
