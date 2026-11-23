@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { CloudOff, Loader2 } from 'lucide-react';
-import type { PatientType, Vitals } from '@workspace/api-client-react';
+import type { AssessmentInput, PatientType, Vitals } from '@workspace/api-client-react';
 import { useApp, ROLE_META } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { clearDraft, readDraft, saveDraft } from '@/lib/offline';
+import { useToast } from '@/hooks/use-toast';
 
 type VField = { key: keyof Vitals; label: string; unit: string; step?: string };
 const VITALS: Record<PatientType, VField[]> = {
@@ -42,6 +43,8 @@ export default function Assess() {
   const [loaded, setLoaded] = useState<string | null>(null);
   const [error, setError] = useState('');
   const submitted = useRef(false);
+  const attempted = useRef<{key:string;input:AssessmentInput} | null>(null);
+  const {toast} = useToast();
   const healthId = record?.patient.health_id;
 
   useEffect(() => {
@@ -52,13 +55,14 @@ export default function Assess() {
       if (!active) return;
       setVitals(d?.vitals ?? {});
       setSymptoms(d?.symptoms ?? []);
+      attempted.current = d?.attempt ?? null;
       setLoaded(healthId);
     });
     return () => { active = false; };
   }, [healthId]);
   useEffect(() => {
     if (!healthId || loaded !== healthId || submitted.current || busy) return;
-    void saveDraft(healthId,vitals,symptoms).catch(() => undefined);
+    void saveDraft(healthId,vitals,symptoms,attempted.current ?? undefined).catch(() => undefined);
   }, [vitals, symptoms, healthId, loaded, busy]);
 
   if (!ready || (healthId && loaded !== healthId)) return <div className="mx-auto max-w-3xl space-y-3 px-4 py-10">{[0, 1, 2].map((i) => <div key={i} className="h-24 animate-pulse rounded-3xl bg-muted" />)}</div>;
@@ -78,9 +82,13 @@ export default function Assess() {
     const v: Vitals = {};
     for (const f of VITALS[role]) if (vitals[f.key]) v[f.key] = Number(vitals[f.key]);
     try {
-      await submitAssessment({ mutation_id: crypto.randomUUID(), vitals: v, symptoms, recorded_at: new Date().toISOString() });
+      const key = JSON.stringify([record.patient.health_id,v,symptoms]);
+      if (attempted.current?.key!==key) attempted.current={key,input:{ mutation_id:crypto.randomUUID(),vitals:v,symptoms,recorded_at:new Date().toISOString() }};
+      await saveDraft(record.patient.health_id,vitals,symptoms,attempted.current).catch(()=>undefined);
+      const {offline} = await submitAssessment(attempted.current.input);
       submitted.current = true;
       await clearDraft(record.patient.health_id).catch(() => undefined);
+      toast({title:offline ? 'Saved Offline — Will Sync Automatically' : 'Saved to Database'});
       navigate('/results');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save this demo assessment.');

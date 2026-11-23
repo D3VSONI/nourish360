@@ -1,9 +1,12 @@
-const cacheName = 'nourish360-shell-v1';
+const cacheName = 'nourish360-shell-v2';
 const shell = new URL('./', self.registration.scope).href;
 const sameOrigin = (url) => url.origin === self.location.origin;
 const api = (url) => url.pathname === '/api' || url.pathname.startsWith('/api/');
-const cacheable = (url) => sameOrigin(url) && !api(url) &&
-  (!url.pathname.includes('/.') || url.pathname.startsWith('/node_modules/.vite/deps/'));
+const viteRuntime = (path) => path.startsWith('/@fs/') &&
+  /\/node_modules\/\.pnpm\/vite@[^/]+\/node_modules\/vite\/dist\/client\/(?:env|client)\.mjs$/.test(path);
+const cacheable = (url) => sameOrigin(url) && !api(url) && (
+  !url.pathname.includes('/.') || url.pathname.startsWith('/node_modules/.vite/deps/') || viteRuntime(url.pathname)
+);
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(cacheName).then(cache => cache.add(shell)).then(() => self.skipWaiting()));

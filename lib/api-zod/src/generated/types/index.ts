@@ -7,6 +7,7 @@
  */
 
 export * from './actionReceipt';
+export * from './activeDrills';
 export * from './assessmentInput';
 export * from './booking';
 export * from './bookingInput';

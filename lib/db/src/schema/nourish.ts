@@ -61,6 +61,7 @@ export const facilities = pgTable('facilities', {
 
 export const ambulanceBookings = pgTable('ambulance_bookings', {
   id: uuid().defaultRandom().primaryKey(), bookingCode: text('booking_code').notNull().unique(),
+  requestKey: text('request_key'),
   healthId: text('health_id').references(() => users.healthId, { onDelete: 'cascade' }),
   patientType: patientType('patient_type').notNull(), emergencyType: text('emergency_type').notNull(),
   pickupVillage: text('pickup_village').notNull(), pickupLat: doublePrecision('pickup_lat').notNull(), pickupLng: doublePrecision('pickup_lng').notNull(),
@@ -70,7 +71,17 @@ export const ambulanceBookings = pgTable('ambulance_bookings', {
   etaSeconds: integer('eta_seconds').notNull(), status: ambulanceStatus().notNull(),
   snapshot: jsonb().notNull(),
   familyCallAt: stamp('family_call_at'), createdAt: stamp('created_at').notNull().defaultNow(),
-});
+}, t => [uniqueIndex('bookings_request_idx').on(t.requestKey), index('bookings_profile_date_idx').on(t.healthId,t.createdAt)]);
+
+export const otpChallenges = pgTable('demo_otp_challenges', {
+  id: uuid().primaryKey(),
+  userId: uuid('user_id').references(() => users.id, { onDelete:'cascade' }),
+  subjectHash: text('subject_hash').notNull(),
+  browserHash: text('browser_hash').notNull(),
+  proof: text().notNull(),
+  expiresAt: stamp('expires_at').notNull(),
+  attempts: integer().notNull().default(0),
+}, t => [index('otp_expiry_idx').on(t.expiresAt)]);
 
 // No raw patient identifiers or contact details are stored in this append-only event interface.
 export const auditLogs = pgTable('audit_logs', {

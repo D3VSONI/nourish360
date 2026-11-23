@@ -2,13 +2,15 @@ import { useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { CloudOff, Loader2, Plus, Route, Siren, Volume2, VolumeX } from 'lucide-react';
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { useBookAmbulance, useRequestReview, type PatientType, type RiskTier, type Visit } from '@workspace/api-client-react';
+import { useRequestReview, type PatientType, type RiskTier, type Visit } from '@workspace/api-client-react';
 import { format } from 'date-fns';
 import { useApp } from '@/lib/store';
 import { Call108 } from '@/components/shell';
 import { TIER_STYLE } from '@/components/demo-bar';
 import { useToast } from '@/hooks/use-toast';
 import { villages } from '@workspace/nourish-logic';
+import { useSaveDrill } from '@/lib/booking';
+import { ActiveDrills } from '@/components/active-drills';
 
 const HEAD: Record<RiskTier, { title: string; line: string }> = {
   GREEN: { title: 'No warning flags in this demo', line: 'The limited demo rules found no warning flags. This does not rule out a health concern.' },
@@ -36,7 +38,7 @@ export default function Results() {
   const { record, queue, ready, openEmergency, online } = useApp();
   const [,navigate] = useLocation();
   const review = useRequestReview();
-  const book = useBookAmbulance();
+  const book = useSaveDrill();
   const { toast } = useToast();
   const [speaking, setSpeaking] = useState<number | null>(null);
 
@@ -68,10 +70,10 @@ export default function Results() {
       /fever|breath/.test(text) ? 'High fever or breathing difficulty' : 'Other urgent concern';
     const village = villages.find(x => x.name.toLowerCase() === patient.village.toLowerCase());
     if (!online || !village) { openEmergency({patient_type:patient.patient_type, emergency_type, village:village?.name}); return; }
-    book.mutate({data:{patient_type:patient.patient_type, emergency_type, pickup_village:village.name}}, {
-      onSuccess: booking => navigate(`/track/${booking.id}`),
-      onError: () => toast({title:'Simulation could not start',description:'For a real emergency, call 108.'}),
-    });
+    void book.save({patient_type:patient.patient_type,emergency_type,pickup_village:village.name}).then(booking=>{
+      toast({title:'Saved to Database',description:'Demo drill only. No ambulance was sent.'});
+      navigate(`/track/${booking.id}`);
+    }).catch(e=>toast({title:'Simulation could not start',description:e.message}));
   };
 
   return (
@@ -83,6 +85,7 @@ export default function Results() {
         </div>
         <Link href="/assess" className="press inline-flex items-center gap-2 rounded-full border bg-card px-4 py-2.5 text-sm font-medium hover:border-primary" data-testid="link-new-visit"><Plus className="h-4 w-4" /> New visit</Link>
       </div>
+      <ActiveDrills />
 
       <section className={`rise mt-6 overflow-hidden rounded-[2rem] ${TIER_STYLE[v.risk_tier]}`} data-testid="banner-risk">
         <div className="phulkari p-6 md:p-8">

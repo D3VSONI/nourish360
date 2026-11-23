@@ -9,8 +9,11 @@ import type { PatientType } from './patientType';
 
 export interface BookingInput {
   patient_type: PatientType;
+  /** @maxLength 100 */
   emergency_type: string;
+  /** @maxLength 100 */
   pickup_village: string;
   pickup_lat?: number;
   pickup_lng?: number;
+  mutation_id: string;
 }

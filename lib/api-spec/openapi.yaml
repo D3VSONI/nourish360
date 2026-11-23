@@ -266,7 +266,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Requires the X-Nourish-Record header matching the authenticated Health ID. Returns acknowledged client mutation IDs, which may differ from server visit IDs."
       }
     },
     "/visits/{id}/review": {
@@ -327,7 +328,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Reuse the randomly generated mutation_id when retrying the same drill. Signed-in keys are scoped to the active profile; guest retries rely on the unpredictable client-generated ID."
       }
     },
     "/ambulance/{id}": {
@@ -452,6 +454,26 @@
             }
           }
         ]
+      }
+    },
+    "/ambulance/active": {
+      "get": {
+        "operationId": "getActiveDrills",
+        "tags": [
+          "health"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActiveDrills"
+                }
+              }
+            }
+          }
+        }
       }
     }
   },
@@ -930,6 +952,11 @@
           },
           "routed_facility": {
             "$ref": "#/components/schemas/Referral"
+          },
+          "mutation_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Client mutation ID for deduplication within this profile."
           }
         },
         "required": [
@@ -1075,22 +1102,29 @@
             "$ref": "#/components/schemas/PatientType"
           },
           "emergency_type": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 100
           },
           "pickup_village": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 100
           },
           "pickup_lat": {
             "type": "number"
           },
           "pickup_lng": {
             "type": "number"
+          },
+          "mutation_id": {
+            "type": "string",
+            "format": "uuid"
           }
         },
         "required": [
           "patient_type",
           "emergency_type",
-          "pickup_village"
+          "pickup_village",
+          "mutation_id"
         ]
       },
       "MapPoint": {
@@ -1247,6 +1281,20 @@
           "consent",
           "audit"
         ]
+      },
+      "ActiveDrills": {
+        "type": "object",
+        "required": [
+          "drills"
+        ],
+        "properties": {
+          "drills": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Booking"
+            }
+          }
+        }
       }
     }
   }

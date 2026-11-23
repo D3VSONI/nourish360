@@ -18,11 +18,11 @@ export const healthId = () => `N360-SNP-${randomBytes(4).toString('hex').toUpper
 export class AppError extends Error { constructor(public status: number, message: string) { super(message); } }
 
 const cases = [
-  { health_id: 'N360-SNP-4821', patient_type: 'CHILD', label: 'Aarav · Child', village: 'Ganaur', risk_tier: 'GREEN' },
-  { health_id: 'N360-SNP-5306', patient_type: 'PREGNANT_LADY', label: 'Meena · Pregnant', village: 'Murthal', risk_tier: 'AMBER' },
-  { health_id: 'N360-SNP-7812', patient_type: 'MOTHER', label: 'Sunita · Postpartum', village: 'Rai', risk_tier: 'RED' },
+  { health_id: 'N360-SNP-1001', legacy: 'N360-SNP-4821', patient_type: 'CHILD', label: 'Aarav · Child', village: 'Ganaur', risk_tier: 'GREEN' },
+  { health_id: 'N360-SNP-1002', legacy: 'N360-SNP-5306', patient_type: 'PREGNANT_LADY', label: 'Meena · Pregnant', village: 'Murthal', risk_tier: 'AMBER' },
+  { health_id: 'N360-SNP-1003', legacy: 'N360-SNP-7812', patient_type: 'MOTHER', label: 'Sunita · Postpartum', village: 'Rai', risk_tier: 'RED' },
 ] as const;
-export const demoCases = cases.map(x => ({...x}));
+export const demoCases = cases.map(({legacy:_,...item}) => item);
 
 export function patient(user: User): Patient {
   const n = user.phoneNumber.slice(-10);
@@ -32,7 +32,7 @@ export function patient(user: User): Patient {
 }
 
 export function visit(row: typeof clinicalVisits.$inferSelect): WireVisit {
-  return { id: row.id, created_at: row.createdAt.toISOString(), vitals: row.vitals as WireVisit['vitals'],
+  return { id: row.id, mutation_id: row.mutationId, created_at: row.createdAt.toISOString(), vitals: row.vitals as WireVisit['vitals'],
     symptoms: row.symptoms as string[], risk_tier: row.riskTier, triggered_rules: row.triggeredRules as string[],
     six_month_forecast: row.forecast as WireVisit['six_month_forecast'], trend: row.trend, trend_details: row.trendDetails as string[],
     next_step: row.nextStep, ...(row.routedFacility ? { routed_facility: row.routedFacility as NonNullable<WireVisit['routed_facility']> } : {}) };
@@ -66,26 +66,27 @@ export async function facilityCatalog(tx: Tx): Promise<Facility[]> {
     capabilities:f.capabilities, blood_bank_status:f.bloodBankStatus, nicus_available:f.nicusAvailable }));
 }
 
-async function writeVisit(tx: Tx, user: User, v: WireVisit) {
-  await tx.insert(clinicalVisits).values({ id:v.id, mutationId:v.id, healthId:user.healthId, patientType:user.patientType, vitals:v.vitals, symptoms:v.symptoms,
+async function writeVisit(tx: Tx, user: User, v: WireVisit, mutationId=v.id) {
+  await tx.insert(clinicalVisits).values({ id:v.id, mutationId, healthId:user.healthId, patientType:user.patientType, vitals:v.vitals, symptoms:v.symptoms,
     riskTier:v.risk_tier, triggeredRules:v.triggered_rules, forecast:v.six_month_forecast, routedFacility:v.routed_facility,
     trend:v.trend, trendDetails:v.trend_details, nextStep:v.next_step, createdAt:new Date(v.created_at) });
 }
 
 export async function saveBatch(tx: Tx, user: User, input: WireAssessment[]): Promise<WireVisit[]> {
-  const past = (await getRecord(tx,user)).visits;
+  const rows = await tx.select().from(clinicalVisits).where(eq(clinicalVisits.healthId,user.healthId));
+  const past = rows.map(visit);
   const catalog = await facilityCatalog(tx);
-  const lookup = new Map(past.map(v => [v.id, v]));
-  const result: WireVisit[] = [];
+  const lookup = new Map(rows.map((row,i) => [row.mutationId,past[i]!]));
+  const result = new Map<string,WireVisit>();
   for (const next of [...input].sort((a,b) => +new Date(a.recorded_at ?? 0) - +new Date(b.recorded_at ?? 0))) {
     const stored = lookup.get(next.mutation_id);
-    if (stored) { result.push(stored); continue; }
-    const v = evaluate(patient(user),next,past,catalog);
-    await writeVisit(tx,user,v);
+    if (stored) { result.set(next.mutation_id,stored); continue; }
+    const v = {...evaluate(patient(user),next,past,catalog),id:randomUUID(),mutation_id:next.mutation_id};
+    await writeVisit(tx,user,v,next.mutation_id);
     await audit(tx,user,'ASSESSMENT_CREATED');
-    past.push(v); lookup.set(v.id,v); result.push(v);
+    past.push(v); lookup.set(next.mutation_id,v); result.set(next.mutation_id,v);
   }
-  return result;
+  return [...result.values()];
 }
 
 export async function cloneDemo(tx: Tx, template: User, device: string): Promise<User> {
@@ -102,7 +103,7 @@ export async function cloneDemo(tx: Tx, template: User, device: string): Promise
 export async function seed(): Promise<void> {
   secret();
   await db.transaction(async tx => {
-    const saved = await tx.select({id:users.healthId}).from(users).where(inArray(users.healthId,cases.map(c => c.health_id)));
+    const saved = await tx.select({id:users.healthId}).from(users).where(inArray(users.healthId,cases.flatMap(c => [c.health_id,c.legacy])));
     for (const f of demoFacilities) await tx.insert(facilities).values({ id:f.id,name:f.name,tier:f.tier,lat:f.lat,lng:f.lng,distanceKm:f.distance_km,
       capabilities:f.capabilities,bloodBankStatus:f.blood_bank_status as typeof facilities.$inferInsert.bloodBankStatus,nicusAvailable:f.nicus_available }).onConflictDoNothing();
     const profiles: ClinicalProfile[] = [
@@ -115,16 +116,18 @@ export async function seed(): Promise<void> {
       [{bp_sys:118,bp_dia:76,hb:11.3,temp_c:36.7},{bp_sys:110,bp_dia:71,hb:10.4,temp_c:37.2},{bp_sys:91,bp_dia:58,hb:6.6,temp_c:38.2}],
     ];
     for (const [i,c] of cases.entries()) {
-      if (saved.some(u => u.id === c.health_id)) continue;
-      const [u] = await tx.insert(users).values({ healthId:c.health_id, patientType:c.patient_type, fullName:['Aarav (Demo)','Meena (Demo)','Sunita (Demo)'][i]!,
-        phoneNumber:`+91000000000${i+1}`, village:c.village, guardianName:i===0?'Demo Guardian':null, profile:profiles[i]!, isTemplate:true }).onConflictDoNothing().returning();
-      if (!u) continue;
-      await grant(tx,u,'synthetic-template');
-      await audit(tx,u,'DEMO_TEMPLATE_CREATED','system');
-      const days = i===2 ? [11,6,1] : [100,49,1];
-      await saveBatch(tx,u,examples[i]!.map((v,j) => ({ mutation_id:randomUUID(), vitals:v,
-        symptoms:i===2 && j===2 ? ['Excessive vaginal blood loss','Severe dizziness / fainting'] : [],
-        recorded_at:new Date(Date.now() - days[j]! * 86_400_000) })));
+      for (const id of [c.health_id,c.legacy]) {
+        if (saved.some(u => u.id === id)) continue;
+        const [u] = await tx.insert(users).values({ healthId:id, patientType:c.patient_type, fullName:['Aarav (Demo)','Meena (Demo)','Sunita (Demo)'][i]!,
+          phoneNumber:`+91000000000${i+1}`, village:c.village, guardianName:i===0?'Demo Guardian':null, profile:profiles[i]!, isTemplate:true }).onConflictDoNothing().returning();
+        if (!u) continue;
+        await grant(tx,u,'synthetic-template');
+        await audit(tx,u,'DEMO_TEMPLATE_CREATED','system');
+        const days = i===2 ? [11,6,1] : [100,49,1];
+        await saveBatch(tx,u,examples[i]!.map((v,j) => ({ mutation_id:randomUUID(), vitals:v,
+          symptoms:i===2 && j===2 ? ['Excessive vaginal blood loss','Severe dizziness / fainting'] : [],
+          recorded_at:new Date(Date.now() - days[j]! * 86_400_000) })));
+      }
     }
   });
 }

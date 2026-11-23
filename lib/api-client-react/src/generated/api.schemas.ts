@@ -202,6 +202,8 @@ export interface Visit {
   trend_details: string[];
   next_step: string;
   routed_facility?: Referral;
+  /** Client mutation ID for deduplication within this profile. */
+  mutation_id?: string;
 }
 
 export interface PatientRecord {
@@ -248,10 +250,13 @@ export interface Catalog {
 
 export interface BookingInput {
   patient_type: PatientType;
+  /** @maxLength 100 */
   emergency_type: string;
+  /** @maxLength 100 */
   pickup_village: string;
   pickup_lat?: number;
   pickup_lng?: number;
+  mutation_id: string;
 }
 
 export interface MapPoint {
@@ -303,5 +308,9 @@ export interface PrivacyExport {
   visits: Visit[];
   consent: PrivacyExportConsent;
   audit: PrivacyExportAuditItem[];
+}
+
+export interface ActiveDrills {
+  drills: Booking[];
 }
 

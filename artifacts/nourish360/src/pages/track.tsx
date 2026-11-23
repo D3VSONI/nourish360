@@ -5,23 +5,25 @@ import { getGetAmbulanceQueryKey, useGetAmbulance, useTriggerFamilyCall } from '
 import { VillageMap } from '@/components/village-map';
 import { Call108 } from '@/components/shell';
 import { useToast } from '@/hooks/use-toast';
+import { useApp } from '@/lib/store';
 
 export default function Track() {
   const { id = '' } = useParams<{ id: string }>();
-  const q = useGetAmbulance(id, { query: { enabled: !!id, queryKey: getGetAmbulanceQueryKey(id), refetchInterval: 8000 } });
+  const {ready,record,online} = useApp();
+  const q = useGetAmbulance(id, { query: { enabled: !!id && ready && online, queryKey: [...getGetAmbulanceQueryKey(id),record?.patient.health_id], refetchInterval: 8000 } });
   const call = useTriggerFamilyCall();
   const { toast } = useToast();
   const [now, setNow] = useState(Date.now());
   const [checked, setChecked] = useState<number[]>([]);
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
 
-  if (q.isLoading) return <div className="mx-auto max-w-5xl space-y-4 px-4 py-8"><div className="h-[45vh] animate-pulse rounded-[2rem] bg-muted" /><div className="h-40 animate-pulse rounded-[2rem] bg-muted" /></div>;
-  if (!q.data) return (
+  if (!ready || q.isLoading) return <div className="mx-auto max-w-5xl space-y-4 px-4 py-8"><div className="h-[45vh] animate-pulse rounded-[2rem] bg-muted" /><div className="h-40 animate-pulse rounded-[2rem] bg-muted" /></div>;
+  if (!online || q.isError || !q.data) return (
     <div className="mx-auto max-w-md px-4 py-20 text-center">
-      <h1 className="font-display text-3xl font-semibold">Simulation not found</h1>
+      <h1 className="font-display text-3xl font-semibold">{online ? 'Simulation not available' : 'Reconnect to view tracking'}</h1>
       <p className="mt-2 text-muted-foreground">If this is a real emergency, do not wait.</p>
       <Call108 className="mt-6 justify-center" />
-      <button onClick={() => q.refetch()} className="mt-4 block w-full text-sm underline" data-testid="button-retry-track">Retry</button>
+      {online && <button onClick={() => q.refetch()} className="mt-4 block w-full text-sm underline" data-testid="button-retry-track">Retry</button>}
     </div>
   );
 

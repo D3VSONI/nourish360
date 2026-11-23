@@ -26,6 +26,7 @@ import type {
 
 import type {
   ActionReceipt,
+  ActiveDrills,
   AssessmentInput,
   Booking,
   BookingInput,
@@ -841,6 +842,9 @@ export const getSyncVisitsUrl = () => {
   return `/api/sync`
 }
 
+/**
+ * Requires the X-Nourish-Record header matching the authenticated Health ID. Returns acknowledged client mutation IDs, which may differ from server visit IDs.
+ */
 export const syncVisits = async (syncBatch: SyncBatch, options?: Parameters<typeof customFetch>[1]): Promise<SyncResult> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
@@ -991,6 +995,9 @@ export const getBookAmbulanceUrl = () => {
   return `/api/ambulance/book`
 }
 
+/**
+ * Reuse the randomly generated mutation_id when retrying the same drill. Signed-in keys are scoped to the active profile; guest retries rely on the unpredictable client-generated ID.
+ */
 export const bookAmbulance = async (bookingInput: BookingInput, options?: Parameters<typeof customFetch>[1]): Promise<Booking> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
@@ -1391,3 +1398,91 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(getEraseRecordMutationOptions(options), queryClient);
     }
 
+export const getGetActiveDrillsUrl = () => {
+
+
+
+
+  return `/api/ambulance/active`
+}
+
+export const getActiveDrills = async ( options?: Parameters<typeof customFetch>[1]): Promise<ActiveDrills> => {
+
+  return customFetch<ActiveDrills>(getGetActiveDrillsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetActiveDrillsQueryKey = () => {
+    return [
+    `/api/ambulance/active`
+    ] as const;
+    }
+
+
+export const getGetActiveDrillsQueryOptions = <TData = Awaited<ReturnType<typeof getActiveDrills>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getActiveDrills>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetActiveDrillsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getActiveDrills>>> = ({ signal }) => getActiveDrills({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getActiveDrills>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetActiveDrillsQueryResult = NonNullable<Awaited<ReturnType<typeof getActiveDrills>>>
+export type GetActiveDrillsQueryError = ErrorType<unknown>
+
+
+export function useGetActiveDrills<TData = Awaited<ReturnType<typeof getActiveDrills>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getActiveDrills>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getActiveDrills>>,
+          TError,
+          Awaited<ReturnType<typeof getActiveDrills>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetActiveDrills<TData = Awaited<ReturnType<typeof getActiveDrills>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getActiveDrills>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getActiveDrills>>,
+          TError,
+          Awaited<ReturnType<typeof getActiveDrills>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetActiveDrills<TData = Awaited<ReturnType<typeof getActiveDrills>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getActiveDrills>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetActiveDrills<TData = Awaited<ReturnType<typeof getActiveDrills>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getActiveDrills>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetActiveDrillsQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}

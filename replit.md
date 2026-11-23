@@ -4,11 +4,11 @@ Nourish360 is a **synthetic demonstration** of maternal, postpartum, and child h
 
 ## Try the demo
 
-- Choose a **Demo quick-fill** case on the home screen to open an isolated, editable copy with three visits: Aarav (child / green), Meena (pregnant / amber), Sunita (postpartum / red).
+- Choose a **Demo quick-fill** case to open an isolated, editable copy with three visits: `N360-SNP-1001` (Aarav, child / green), `N360-SNP-1002` (Meena, pregnant / amber), or `N360-SNP-1003` (Sunita, postpartum / red). Use the copy’s own Health ID to return to the same history.
 - Or choose a role, register with an invented name and a fictional number such as `0000000000`, grant consent, and use the displayed demo OTP. No SMS or call is sent. Returning-user examples are listed in the login tab.
 - Open a demo profile online before going offline. In an offline-capable browser, the cached app shell, synthetic record, draft, and assessment rules remain available without a connection. Queued visits retry while the app is open and when it reconnects. Registration, authentication, exports, erasure, tele-review logging, and starting a new ambulance drill need a connection.
 - The **Ambulance drill** uses fixed demonstration pickup points and a synthetic route, not live GPS or hospital availability. Map tiles need connectivity. The role-specific emergency checklist remains available offline. No family calls, clinic appointments, or bookings are sent to a provider.
-- **DPDP controls** exports the synthetic record as JSON, signs out and clears the local copy, or permanently erases the synthetic profile and visits. Erasure detaches and de-identifies the revoked consent entry. The app only appends to its audit trail; this is not a tamper-proof database audit system.
+- **DPDP controls** exports the synthetic record as JSON, signs out and clears the current snapshot and draft, or permanently erases the synthetic profile and visits. Sign-out does not discard unsynced assessments; sign back into the same profile to sync them. Erasure also clears that profile’s queue and drills, and de-identifies the revoked consent entry. The audit trail is not tamper-proof.
 
 ## Run and maintain
 

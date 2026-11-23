@@ -5,7 +5,8 @@ import {
   useGetCatalog, useRegisterPatient, useSendOtp, useVerifyOtp,
   type Challenge, type ClinicalProfile, type PatientType, type RegistrationInputChannel,
 } from '@workspace/api-client-react';
-import { useApp, ROLE_META, slugToRole } from '@/lib/store';
+import { errorMessage, useApp, ROLE_META, slugToRole } from '@/lib/store';
+import { useToast } from '@/hooks/use-toast';
 import { DemoBar } from '@/components/demo-bar';
 import NotFound from '@/pages/not-found';
 import { cn } from '@/lib/utils';
@@ -39,11 +40,12 @@ export default function Auth() {
   const params = useParams<{ role: string }>();
   const role = slugToRole(params.role);
   if (!role) return <NotFound />;
-  return <AuthInner role={role} />;
+  return <AuthInner key={role} role={role} />;
 }
 
 function AuthInner({ role }: { role: PatientType }) {
   const { setRole, adoptRecord, online } = useApp();
+  const {toast} = useToast();
   const [, navigate] = useLocation();
   const catalog = useGetCatalog();
   const register = useRegisterPatient();
@@ -80,22 +82,22 @@ function AuthInner({ role }: { role: PatientType }) {
     e.preventDefault(); setErr('');
     if (!canRegister) return;
     register.mutate({ data: { patient_type: role, full_name: name.trim(), phone_number: phone, village, consent, channel, profile, ...(role === 'CHILD' ? { guardian_name: guardian.trim(), guardian_consent: guardianConsent } : {}) } }, {
-      onSuccess: (c) => { setChallenge(c); setCode(''); },
-      onError: () => setErr('Registration failed. Use a reserved demo number like 0000000000.'),
+      onSuccess: (c) => { setChallenge(c); setCode(''); toast({title:'Saved to Database',description:'Demo profile created. Verify your code to open it.'}); },
+      onError: (e) => setErr(errorMessage(e,'Registration could not be confirmed. Reconnect and try again.')),
     });
   };
   const doLogin = (e: React.FormEvent) => {
     e.preventDefault(); setErr('');
     sendOtp.mutate({ data: { health_id: hid.trim().toUpperCase(), phone_number: loginPhone, channel } }, {
       onSuccess: (c) => { setChallenge(c); setCode(''); },
-      onError: () => setErr('No match for that Health ID and number.'),
+      onError: (e) => setErr(errorMessage(e,'Could not request a demo code. Try again once online.')),
     });
   };
   const doVerify = (e: React.FormEvent) => {
     e.preventDefault(); if (!challenge) return; setErr('');
     verify.mutate({ data: { health_id: challenge.health_id, challenge_id: challenge.challenge_id, code } }, {
       onSuccess: async (rec) => { await adoptRecord(rec); navigate(rec.visits.length ? '/results' : '/assess'); },
-      onError: () => setErr('That code did not match. Try again.'),
+      onError: (e) => setErr(errorMessage(e,'Verification did not finish. Request a fresh demo code if needed.')),
     });
   };
 
@@ -115,7 +117,7 @@ function AuthInner({ role }: { role: PatientType }) {
 
       <section className="rise rounded-[2rem] border bg-card p-5 shadow-[0_20px_50px_-30px_hsl(312_52%_30%/.4)] md:p-7" style={{ animationDelay: '.1s' }}>
         {challenge ? (
-          <form onSubmit={doVerify} className="space-y-5">
+          <form key="verify" onSubmit={doVerify} className="space-y-5">
             <h2 className="font-display text-2xl font-semibold">Enter the 6-digit code</h2>
             <div className="rounded-2xl bg-primary p-4 text-primary-foreground">
               <p className="font-mono text-xs opacity-75">Health ID</p>
@@ -131,7 +133,7 @@ function AuthInner({ role }: { role: PatientType }) {
             {err && <p className="text-sm text-[hsl(var(--tier-red))]">{err}</p>}
             <div className="flex gap-2">
               <button type="button" onClick={() => setChallenge(null)} className="press rounded-xl border px-4" data-testid="button-otp-back">Back</button>
-              <button disabled={code.length !== 6 || verify.isPending} data-testid="button-verify" className="press flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary py-3 font-semibold text-primary-foreground disabled:opacity-40">
+              <button disabled={code.length !== 6 || verify.isPending || !online} data-testid="button-verify" className="press flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary py-3 font-semibold text-primary-foreground disabled:opacity-40">
                 {verify.isPending && <Loader2 className="h-4 w-4 animate-spin" />} Verify and continue
               </button>
             </div>
@@ -140,14 +142,14 @@ function AuthInner({ role }: { role: PatientType }) {
           <>
             <div className="mb-6 grid grid-cols-2 rounded-2xl bg-muted p-1">
               {(['new', 'login'] as const).map((t) => (
-                <button key={t} onClick={() => { setTab(t); setErr(''); }} data-testid={`tab-${t}`}
+                <button key={t} type="button" aria-pressed={tab===t} onClick={() => { setTab(t); setErr(''); }} data-testid={`tab-${t}`}
                   className={cn('rounded-xl py-2.5 text-sm font-medium transition', tab === t ? 'bg-card shadow-sm' : 'text-muted-foreground')}>
                   {t === 'new' ? 'New registration' : 'Returning user'}
                 </button>
               ))}
             </div>
             {tab === 'new' ? (
-              <form onSubmit={doRegister} className="space-y-4">
+              <form key="registration" onSubmit={doRegister} className="space-y-4">
                 <div className="grid gap-3 sm:grid-cols-2">
                   <L label="Synthetic alias"><input className={field} value={name} onChange={(e) => setName(e.target.value)} data-testid="input-name" /></L>
                   <L label="Demo mobile (reserved)"><input className={cn(field, 'font-mono', !phoneOk && 'border-[hsl(var(--tier-red))]')} value={phone} onChange={(e) => setPhone(e.target.value.trim())} data-testid="input-phone" /></L>
@@ -200,10 +202,10 @@ function AuthInner({ role }: { role: PatientType }) {
                 </button>
               </form>
             ) : (
-              <form onSubmit={doLogin} className="space-y-4">
-                <L label="Nourish360 Health ID"><input className={cn(field, 'font-mono uppercase')} placeholder="N360-SNP-4821" value={hid} onChange={(e) => setHid(e.target.value)} data-testid="input-health-id" /></L>
+              <form key="returning" onSubmit={doLogin} className="space-y-4">
+                <L label="Nourish360 Health ID"><input className={cn(field, 'font-mono uppercase')} placeholder="N360-SNP-1001" value={hid} onChange={(e) => setHid(e.target.value)} data-testid="input-health-id" /></L>
                 <L label="Demo mobile"><input className={cn(field, 'font-mono')} placeholder="0000000001" value={loginPhone} onChange={(e) => setLoginPhone(e.target.value.trim())} data-testid="input-login-phone" /></L>
-                <p className="font-mono text-[11px] text-muted-foreground">Templates: 4821 / 0000000001 · 5306 / 0000000002 · 7812 / 0000000003</p>
+                <p className="font-mono text-[11px] text-muted-foreground">Templates: 1001 / 0000000001 · 1002 / 0000000002 · 1003 / 0000000003</p>
                 <Channel value={channel} onChange={setChannel} />
                 {err && <p className="text-sm text-[hsl(var(--tier-red))]">{err}</p>}
                 <button disabled={!/^N360-SNP-[A-Z0-9]{4,8}$/i.test(hid.trim()) || !loginPhone || sendOtp.isPending || !online} data-testid="button-send-otp" className="press flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-3.5 font-semibold text-primary-foreground disabled:opacity-40">

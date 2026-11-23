@@ -109,7 +109,8 @@ export const StartDemoResponse = zod.object({
   "reason": zod.string(),
   "distance_km": zod.number()
 }))
-}).optional()
+}).optional(),
+  "mutation_id": zod.uuid().optional().describe('Client mutation ID for deduplication within this profile.')
 }))
 })
 
@@ -183,7 +184,8 @@ export const GetSessionResponse = zod.object({
   "reason": zod.string(),
   "distance_km": zod.number()
 }))
-}).optional()
+}).optional(),
+  "mutation_id": zod.uuid().optional().describe('Client mutation ID for deduplication within this profile.')
 }))
 })
 
@@ -342,7 +344,8 @@ export const VerifyOtpResponse = zod.object({
   "reason": zod.string(),
   "distance_km": zod.number()
 }))
-}).optional()
+}).optional(),
+  "mutation_id": zod.uuid().optional().describe('Client mutation ID for deduplication within this profile.')
 }))
 })
 
@@ -411,10 +414,14 @@ export const AnalyzeVisitResponse = zod.object({
   "reason": zod.string(),
   "distance_km": zod.number()
 }))
-}).optional()
+}).optional(),
+  "mutation_id": zod.uuid().optional().describe('Client mutation ID for deduplication within this profile.')
 })
 
 
+/**
+ * Requires the X-Nourish-Record header matching the authenticated Health ID. Returns acknowledged client mutation IDs, which may differ from server visit IDs.
+ */
 export const syncVisitsBodyVisitsItemSymptomsItemMax = 80;
 
 export const syncVisitsBodyVisitsItemSymptomsMax = 20;
@@ -485,7 +492,8 @@ export const SyncVisitsResponse = zod.object({
   "reason": zod.string(),
   "distance_km": zod.number()
 }))
-}).optional()
+}).optional(),
+  "mutation_id": zod.uuid().optional().describe('Client mutation ID for deduplication within this profile.')
 }))
 })
 
@@ -500,12 +508,22 @@ export const RequestReviewResponse = zod.object({
 })
 
 
+/**
+ * Reuse the randomly generated mutation_id when retrying the same drill. Signed-in keys are scoped to the active profile; guest retries rely on the unpredictable client-generated ID.
+ */
+export const bookAmbulanceBodyEmergencyTypeMax = 100;
+
+export const bookAmbulanceBodyPickupVillageMax = 100;
+
+
+
 export const BookAmbulanceBody = zod.object({
   "patient_type": zod.enum(['CHILD', 'PREGNANT_LADY', 'MOTHER']),
-  "emergency_type": zod.string(),
-  "pickup_village": zod.string(),
+  "emergency_type": zod.string().max(bookAmbulanceBodyEmergencyTypeMax),
+  "pickup_village": zod.string().max(bookAmbulanceBodyPickupVillageMax),
   "pickup_lat": zod.number().optional(),
-  "pickup_lng": zod.number().optional()
+  "pickup_lng": zod.number().optional(),
+  "mutation_id": zod.uuid()
 })
 
 export const BookAmbulanceResponse = zod.object({
@@ -676,7 +694,8 @@ export const ExportRecordResponse = zod.object({
   "reason": zod.string(),
   "distance_km": zod.number()
 }))
-}).optional()
+}).optional(),
+  "mutation_id": zod.uuid().optional().describe('Client mutation ID for deduplication within this profile.')
 })),
   "consent": zod.record(zod.string(), zod.unknown()),
   "audit": zod.array(zod.record(zod.string(), zod.unknown()))
@@ -693,6 +712,47 @@ export const EraseRecordParams = zod.object({
 export const EraseRecordResponse = zod.object({
   "message": zod.string(),
   "reference": zod.string().optional()
+})
+
+
+export const GetActiveDrillsResponse = zod.object({
+  "drills": zod.array(zod.object({
+  "id": zod.uuid(),
+  "booking_code": zod.string(),
+  "patient_type": zod.enum(['CHILD', 'PREGNANT_LADY', 'MOTHER']),
+  "emergency_type": zod.string(),
+  "pickup_village": zod.string(),
+  "pickup_lat": zod.number(),
+  "pickup_lng": zod.number(),
+  "destination": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "tier": zod.string(),
+  "lat": zod.number(),
+  "lng": zod.number(),
+  "distance_km": zod.number(),
+  "capabilities": zod.array(zod.string()),
+  "blood_bank_status": zod.string(),
+  "nicus_available": zod.int()
+}),
+  "bypassed_facilities": zod.array(zod.object({
+  "name": zod.string(),
+  "reason": zod.string(),
+  "distance_km": zod.number()
+})),
+  "driver_name": zod.string(),
+  "driver_phone": zod.string(),
+  "ambulance_number": zod.string(),
+  "eta_seconds": zod.int(),
+  "status": zod.enum(['DISPATCHED', 'EN_ROUTE', 'ARRIVED']),
+  "created_at": zod.coerce.date(),
+  "route": zod.array(zod.object({
+  "lat": zod.number(),
+  "lng": zod.number()
+})),
+  "guide": zod.array(zod.string()),
+  "simulation": zod.boolean()
+}))
 })
 
 

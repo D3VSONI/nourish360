@@ -45,8 +45,10 @@ app.use("/api", router);
 const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
   if (res.headersSent) { next(err); return; }
   if (err instanceof AppError) { res.status(err.status).json({error:err.message}); return; }
-  if (err instanceof SyntaxError) { res.status(400).json({error:'Invalid JSON.'}); return; }
+  if (err?.type === 'entity.parse.failed') { res.status(400).json({error:'Invalid JSON.'}); return; }
   if (err?.status === 413) { res.status(413).json({error:'Request is too large.'}); return; }
+  if (err?.status === 415) { res.status(415).json({error:'Unsupported request encoding. Send UTF-8 JSON.'}); return; }
+  if (err?.type === 'request.aborted' || err?.type === 'request.size.invalid') { res.status(400).json({error:'Incomplete JSON request.'}); return; }
   req.log.error({name:err?.name, code:err?.code ?? err?.cause?.code},'Nourish360 request failed');
   res.status(500).json({error:'Something went wrong. Try again.'});
 };

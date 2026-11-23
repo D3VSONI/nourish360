@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
 import { AlertTriangle, Loader2, MapPin } from 'lucide-react';
-import { useBookAmbulance, useGetCatalog, type PatientType } from '@workspace/api-client-react';
+import { useGetCatalog, type PatientType } from '@workspace/api-client-react';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useApp, ROLE_META } from '@/lib/store';
 import { Call108 } from '@/components/shell';
 import { cn } from '@/lib/utils';
 import { guides } from '@workspace/nourish-logic';
+import { useSaveDrill } from '@/lib/booking';
+import { useToast } from '@/hooks/use-toast';
 
 export const EMERGENCY_TYPES = [
   'Excessive bleeding',
@@ -24,7 +26,8 @@ export function EmergencySheet() {
   const { emergencyOpen, closeEmergency, emergencyPrefill, record, online } = useApp();
   const [, navigate] = useLocation();
   const catalog = useGetCatalog();
-  const book = useBookAmbulance();
+  const book = useSaveDrill();
+  const {toast} = useToast();
   const [ptype, setPtype] = useState<PatientType>('PREGNANT_LADY');
   const [etype, setEtype] = useState(EMERGENCY_TYPES[0]);
   const [village, setVillage] = useState('');
@@ -42,10 +45,11 @@ export function EmergencySheet() {
 
   const submit = () => {
     if (!chosen) return;
-    book.mutate(
-      { data: { patient_type: ptype, emergency_type: etype, pickup_village: chosen.name } },
-      { onSuccess: (b) => { closeEmergency(); navigate(`/track/${b.id}`); } },
-    );
+    void book.save({ patient_type:ptype,emergency_type:etype,pickup_village:chosen.name }).then(b=>{
+      toast({title:'Saved to Database',description:'Demo drill only. No ambulance was sent.'});
+      closeEmergency();
+      navigate(`/track/${b.id}`);
+    }).catch(()=>undefined);
   };
 
   return (
@@ -92,9 +96,9 @@ export function EmergencySheet() {
               </div>
             )}
           </section>
-          {book.isError && (
-            <p className="flex items-center gap-2 rounded-xl bg-[hsl(var(--tier-red)/.1)] p-3 text-sm text-[hsl(var(--tier-red))]">
-              <AlertTriangle className="h-4 w-4" /> Simulation could not start. Call 108 directly.
+          {book.error && (
+            <p role="alert" className="flex items-center gap-2 rounded-xl bg-[hsl(var(--tier-red)/.1)] p-3 text-sm text-[hsl(var(--tier-red))]">
+              <AlertTriangle className="h-4 w-4" /> {book.error}
             </p>
           )}
           {!online && (

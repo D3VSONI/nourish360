@@ -2,7 +2,9 @@ import { randomInt, randomUUID, timingSafeEqual } from 'node:crypto';
 import type { Request, Response } from 'express';
 import { SignJWT, jwtVerify } from 'jose';
 import type { Challenge, RegistrationInput } from '@workspace/api-zod';
-import { AppError, digest, secret } from './nourish-store';
+import { and, eq, lt } from 'drizzle-orm';
+import { db, otpChallenges, users } from '@workspace/db';
+import { AppError, digest, secret, type Tx } from './nourish-store';
 
 const sessionCookie = 'n360_session';
 const deviceCookie = 'n360_browser';
@@ -14,11 +16,15 @@ export const canonicalPhone = (n:string) => `+91${n.trim().slice(-10)}`;
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function browser(req: Request, res: Response) {
-  const existing = req.cookies?.[deviceCookie];
-  if (typeof existing === 'string' && uuid.test(existing)) return existing;
+  const existing = browserId(req);
+  if (existing) return existing;
   const id = randomUUID();
   res.cookie(deviceCookie, id, {...opts,maxAge:86_400_000});
   return id;
+}
+function browserId(req:Request): string | undefined {
+  const value = req.cookies?.[deviceCookie];
+  return typeof value === 'string' && uuid.test(value) ? value : undefined;
 }
 export async function establish(res: Response, id: string) {
   const token = await new SignJWT({}).setProtectedHeader({alg:'HS256'}).setIssuer(issuer).setAudience(issuer).setSubject(id).setIssuedAt().setExpirationTime('12h').sign(encoder.encode(secret()));
@@ -37,8 +43,6 @@ export async function account(req:Request, optional = false): Promise<string | u
   return undefined;
 }
 
-type Pending = { userId:string; healthId:string; proof:string; device:string; expires:number; attempts:number };
-const challenges = new Map<string,Pending>();
 const limits = new Map<string,{ reset:number; hits:number }>();
 const now = () => Date.now();
 
@@ -49,25 +53,39 @@ export function limit(req:Request, bucket:string, max:number, interval = 60_000)
   if (++current.hits > max) throw new AppError(429,'Too many requests. Wait a minute and try again.');
 }
 const clean = setInterval(() => {
-  for (const [id,x] of challenges) if (x.expires <= now()) challenges.delete(id);
   for (const [id,x] of limits) if (x.reset <= now()) limits.delete(id);
 },60_000);
 clean.unref();
 
-export function issue(userId:string, healthId:string, device:string, channel:'sms'|'call'): Challenge {
+export async function issue(tx:Tx, userId:string|null, healthId:string, device:string, channel:'sms'|'call'): Promise<Challenge> {
   const id = randomUUID();
   const code = String(randomInt(100_000, 1_000_000));
-  for (const [key,x] of challenges) if (x.device === device && x.userId === userId) challenges.delete(key);
-  challenges.set(id,{userId,healthId,proof:digest(`otp:${id}:${code}`),device,expires:now()+5*60_000,attempts:0});
+  const subjectHash = digest(`otp-subject:${healthId}`);
+  const browserHash = digest(`otp-browser:${device}`);
+  await tx.delete(otpChallenges).where(lt(otpChallenges.expiresAt,new Date()));
+  await tx.delete(otpChallenges).where(and(eq(otpChallenges.subjectHash,subjectHash),eq(otpChallenges.browserHash,browserHash)));
+  await tx.insert(otpChallenges).values({id,userId,subjectHash,browserHash,proof:digest(`otp:${id}:${code}`),expiresAt:new Date(now()+5*60_000)});
   return { health_id:healthId, challenge_id:id, channel, demo_code:code };
 }
-export function consume(req:Request,id:string,healthId:string,code:string) {
-  const c = challenges.get(id);
-  if (!c || c.expires <= now() || c.healthId !== healthId || req.cookies?.[deviceCookie] !== c.device) throw new AppError(400,'The demo code expired. Request a new one.');
-  if (++c.attempts >= 5) challenges.delete(id);
-  if (!timingSafeEqual(Buffer.from(c.proof),Buffer.from(digest(`otp:${id}:${code}`)))) throw new AppError(400,'That demo code did not match.');
-  challenges.delete(id);
-  return c;
+export async function consume<T>(req:Request,id:string,healthId:string,code:string, verify:(tx:Tx,userId:string,device:string)=>Promise<T>): Promise<T> {
+  const device = browserId(req);
+  if (!device) throw new AppError(400,'The demo code expired. Request a new one.');
+  const result = await db.transaction(async tx => {
+    const [candidate] = await tx.select({userId:otpChallenges.userId}).from(otpChallenges).where(eq(otpChallenges.id,id));
+    // Serialize with reissue and erasure, which also lock the account before modifying challenges.
+    if (candidate?.userId) await tx.select({id:users.id}).from(users).where(eq(users.id,candidate.userId)).for('update');
+    const [c] = await tx.select().from(otpChallenges).where(eq(otpChallenges.id,id)).for('update');
+    if (!c || c.expiresAt.getTime() <= now() || c.subjectHash !== digest(`otp-subject:${healthId}`) || c.browserHash !== digest(`otp-browser:${device}`)) {
+      return { error:'The demo code expired. Request a new one.' } as const;
+    }
+    const matches = timingSafeEqual(Buffer.from(c.proof),Buffer.from(digest(`otp:${id}:${code}`)));
+    if (matches || c.attempts >= 4) await tx.delete(otpChallenges).where(eq(otpChallenges.id,id));
+    else await tx.update(otpChallenges).set({attempts:c.attempts+1}).where(eq(otpChallenges.id,id));
+    if (!matches || !c.userId) return { error:'The demo code or login details did not match.' } as const;
+    return { value:await verify(tx,c.userId,device) };
+  });
+  if ('value' in result) return result.value as T;
+  throw new AppError(400,result.error);
 }
 
 const inRange = (n:number|undefined,min:number,max:number) => n !== undefined && n>=min && n<=max;

@@ -3,6 +3,7 @@ import { ArrowRight, Baby, HeartHandshake, Siren, Sprout } from 'lucide-react';
 import type { PatientType } from '@workspace/api-client-react';
 import { useApp, ROLE_META } from '@/lib/store';
 import { DemoBar } from '@/components/demo-bar';
+import { ActiveDrills } from '@/components/active-drills';
 import { Call108 } from '@/components/shell';
 
 const ICONS: Record<PatientType, typeof Baby> = { CHILD: Baby, PREGNANT_LADY: Sprout, MOTHER: HeartHandshake };
@@ -42,7 +43,8 @@ export default function Home() {
         </div>
       </section>
 
-      <section>
+      <ActiveDrills />
+      <section className="mt-5">
         <p className="mb-4 font-mono text-xs uppercase tracking-[.2em] text-muted-foreground">Who are we checking today?</p>
         <div className="grid gap-4 md:grid-cols-[1.15fr_1fr_1fr]">
           {(Object.keys(ROLE_META) as PatientType[]).map((r, i) => {

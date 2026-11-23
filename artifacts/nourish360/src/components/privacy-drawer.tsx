@@ -34,7 +34,7 @@ export function PrivacyDrawer() {
     if (!hid) return;
     erase.mutate({ healthId: hid }, {
       onSuccess: async (r) => {
-        const cleared = await forgetLocal().then(() => true, () => false);
+        const cleared = await forgetLocal(true).then(() => true, () => false);
         setConfirm(''); setPrivacyOpen(false); navigate('/');
         toast({ title: 'Record erased', description: cleared ? r.message : `${r.message} This browser could not clear local storage. Clear site data on the device.` });
       },
@@ -62,7 +62,7 @@ export function PrivacyDrawer() {
             <DrawerDescription>DPDP Act 2023 rights for this synthetic demo profile: see it, take it, or erase it.</DrawerDescription>
           </DrawerHeader>
           {!record ? (
-            <div className="phulkari rounded-2xl border p-6 text-center text-sm text-muted-foreground">No profile on this device. Nothing stored, nothing to erase.</div>
+            <div className="phulkari rounded-2xl border p-6 text-center text-sm text-muted-foreground">No signed-in profile. Sign in to manage its server record and any pending offline assessments.</div>
           ) : (
             <div className="space-y-3">
               <div className="rounded-2xl border bg-background p-4 font-mono text-xs" data-testid="text-privacy-summary">
@@ -74,7 +74,7 @@ export function PrivacyDrawer() {
                 <span><b className="block">Download my record</b><span className="text-xs text-muted-foreground">JSON with visits, consent and audit trail</span></span>
               </button>
               <button onClick={signOut} disabled={end.isPending || !online} data-testid="button-sign-out" className="press flex w-full items-center gap-3 rounded-2xl border p-4 text-left hover:bg-muted disabled:opacity-50">
-                <LogOut className="h-5 w-5" /><span><b className="block">Sign out & clear this device</b><span className="text-xs text-muted-foreground">Server record stays; local copy and queue are removed</span></span>
+                <LogOut className="h-5 w-5" /><span><b className="block">Sign out & clear this profile’s history</b><span className="text-xs text-muted-foreground">Unsent assessments stay on this device and sync only when you sign back into this profile.</span></span>
               </button>
               <div className="rounded-2xl border border-[hsl(var(--tier-red)/.4)] p-4">
                 <p className="flex items-center gap-2 font-semibold text-[hsl(var(--tier-red))]"><Trash2 className="h-4 w-4" /> Erase permanently</p>

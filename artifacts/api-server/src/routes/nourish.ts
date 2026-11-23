@@ -1,9 +1,8 @@
-import { randomUUID } from 'node:crypto';
 import { Router, type Request, type Response } from 'express';
 import { and, desc, eq } from 'drizzle-orm';
 import * as api from '@workspace/api-zod';
 import { auditLogs, clinicalVisits, consentLogs, db, users } from '@workspace/db';
-import { villages } from '@workspace/nourish-logic';
+import { validateAssessment, villages } from '@workspace/nourish-logic';
 import { account, browser, canonicalPhone, clearSession, consume, establish, issue, limit, profileFor, syntheticPhone } from '../lib/nourish-auth';
 import { AppError, audit, cloneDemo, demoCases, digest, erase, getRecord, grant, healthId, lockAccount, saveBatch, type Tx, type User } from '../lib/nourish-store';
 
@@ -23,7 +22,7 @@ export async function owned<T>(req:Request, run:(tx:Tx,u:User)=>Promise<T>): Pro
     return run(tx,u);
   });
 }
-router.get('/catalog',(_req,res) => out(res,api.GetCatalogResponse,{villages,demo_cases:demoCases,mode:'demo'}));
+router.get('/catalog',(req,res) => { browser(req,res); out(res,api.GetCatalogResponse,{villages,demo_cases:demoCases,mode:'demo'}); });
 router.post('/demo/session',async (req,res) => {
   limit(req,'session',24);
   const data = parse(api.StartDemoBody,req.body);
@@ -56,35 +55,34 @@ router.post('/auth/register',async (req,res) => {
   const data = parse(api.RegisterPatientBody,req.body);
   const profile = profileFor(data);
   const device = browser(req,res);
-  const u = await db.transaction(async tx => {
+  const challenge = await db.transaction(async tx => {
     const [created] = await tx.insert(users).values({healthId:healthId(),patientType:data.patient_type,fullName:data.full_name.trim(),
       phoneNumber:canonicalPhone(data.phone_number),village:data.village.trim(),guardianName:data.patient_type==='CHILD'?data.guardian_name!.trim():null,profile}).returning();
     if (!created) throw new Error('Registration insert returned no profile');
     await grant(tx,created,device);
     await audit(tx,created,'CONSENT_GRANTED','demo_registration');
-    return created;
+    return issue(tx,created.id,created.healthId,device,data.channel);
   });
-  out(res,api.RegisterPatientResponse,issue(u.id,u.healthId,device,data.channel));
+  out(res,api.RegisterPatientResponse,challenge);
 });
 router.post('/auth/send-otp',async (req,res) => {
   limit(req,'otp',20);
   const data = parse(api.SendOtpBody,req.body);
   const device = browser(req,res);
   const result = await db.transaction(async tx => {
-    const [u] = syntheticPhone(data.phone_number) ? await tx.select().from(users).where(and(eq(users.healthId,data.health_id),eq(users.phoneNumber,canonicalPhone(data.phone_number)))) : [];
+    const [u] = syntheticPhone(data.phone_number) ? await tx.select().from(users).where(and(eq(users.healthId,data.health_id),eq(users.phoneNumber,canonicalPhone(data.phone_number)))).for('update') : [];
     if (u) await audit(tx,u,'DEMO_OTP_REQUESTED','demo_verification');
-    return issue(u?.id ?? randomUUID(),data.health_id,device,data.channel);
+    return issue(tx,u?.id ?? null,data.health_id,device,data.channel);
   });
   out(res,api.SendOtpResponse,result);
 });
 router.post('/auth/verify-otp',async (req,res) => {
   limit(req,'verify',35);
   const data = parse(api.VerifyOtpBody,req.body);
-  const challenge = consume(req,data.challenge_id,data.health_id,data.code);
-  const result = await db.transaction(async tx => {
-    const [found] = await tx.select().from(users).where(eq(users.id,challenge.userId));
+  const result = await consume(req,data.challenge_id,data.health_id,data.code,async (tx,userId,device) => {
+    const [found] = await tx.select().from(users).where(eq(users.id,userId));
     if (!found) throw new AppError(400,'The demo details did not match an account.');
-    const u = found.isTemplate ? await cloneDemo(tx,found,challenge.device) : await lockAccount(tx,found.id);
+    const u = found.isTemplate ? await cloneDemo(tx,found,device) : await lockAccount(tx,found.id);
     await audit(tx,u,'OTP_VERIFIED');
     await audit(tx,u,'RECORD_READ');
     return {id:u.id,record:await getRecord(tx,u)};
@@ -92,14 +90,9 @@ router.post('/auth/verify-otp',async (req,res) => {
   await establish(res,result.id);
   out(res,api.VerifyOtpResponse,result.record);
 });
-const ranges: Record<keyof api.Vitals,[number,number]> = { bp_sys:[35,300],bp_dia:[20,200],hb:[1,25],weight_kg:[0.2,320],temp_c:[25,46],resp_rate:[0,150],muac_cm:[3,65] };
 function validateVisit(input: api.AssessmentInput) {
-  if (!Object.keys(input.vitals).length && !input.symptoms.length) throw new AppError(400,'Enter a sample reading or select a symptom.');
-  for (const [key,value] of Object.entries(input.vitals)) {
-    const range = ranges[key as keyof api.Vitals];
-    if (range && (value<range[0] || value>range[1])) throw new AppError(400,'A sample vital is outside the accepted entry range.');
-  }
-  if (input.recorded_at && (input.recorded_at.getTime()>Date.now()+300_000 || input.recorded_at.getUTCFullYear()<2020)) throw new AppError(400,'Enter a valid assessment date.');
+  const error = validateAssessment(input);
+  if (error) throw new AppError(400,error);
   return input;
 }
 router.post('/visits/analyze',async (req,res) => {
@@ -111,8 +104,9 @@ router.post('/visits/analyze',async (req,res) => {
 router.post('/sync',async (req,res) => {
   limit(req,'sync',45);
   const data = parse(api.SyncVisitsBody,req.body);
+  if (!req.get('x-nourish-record')) throw new AppError(400,'Specify the Health ID of the offline assessments.');
   const visits = await owned(req,(tx,u)=>saveBatch(tx,u,data.visits.map(validateVisit)));
-  out(res,api.SyncVisitsResponse,{synced_ids:visits.map(v=>v.id),visits});
+  out(res,api.SyncVisitsResponse,{synced_ids:[...new Set(data.visits.map(v=>v.mutation_id))],visits});
 });
 router.post('/visits/:id/review',async (req,res) => {
   const {id} = parse(api.RequestReviewParams,req.params);

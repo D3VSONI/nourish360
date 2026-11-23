@@ -1,0 +1,1 @@
+- [Offline preview testing](offline-preview-testing.md) — test a full offline reload; the Replit Vite preview needs a narrowly scoped runtime-cache exception.

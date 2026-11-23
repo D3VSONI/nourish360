@@ -22,4 +22,6 @@ export interface Visit {
   trend_details: string[];
   next_step: string;
   routed_facility?: Referral;
+  /** Client mutation ID for deduplication within this profile. */
+  mutation_id?: string;
 }

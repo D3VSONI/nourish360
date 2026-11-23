@@ -24,7 +24,7 @@ export function Call108({ className, compact }: { className?: string; compact?: 
 }
 
 export function SyncBadge() {
-  const { online, queue, syncing, syncNow } = useApp();
+  const { online, queue, syncing, syncError, syncNow } = useApp();
   return (
     <button
       onClick={() => void syncNow()}
@@ -34,16 +34,16 @@ export function SyncBadge() {
         'press inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider transition-colors',
         online ? 'border-[hsl(var(--tier-green)/.35)] bg-[hsl(var(--tier-green)/.08)] text-[hsl(var(--tier-green))]' : 'border-[hsl(var(--tier-amber)/.5)] bg-[hsl(var(--tier-amber)/.12)] text-[hsl(30_70%_30%)]',
       )}
-      title={online ? 'Tap to sync now' : 'Offline. Assessments are kept on this device.'}
+      title={syncError || (online ? 'Tap to sync now' : 'Offline. Assessments are kept on this device.')}
     >
       {syncing ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : online ? <Wifi className="h-3.5 w-3.5" /> : <CloudOff className="h-3.5 w-3.5" />}
-      {online ? (queue.length ? `${queue.length} to sync` : 'Synced') : `Offline${queue.length ? ` · ${queue.length} queued` : ''}`}
+      {online ? (queue.length ? `${queue.length} to sync` : 'Online') : `Offline${queue.length ? ` · ${queue.length} queued` : ''}`}
     </button>
   );
 }
 
 export function Shell({ children }: { children: ReactNode }) {
-  const { openEmergency, setPrivacyOpen } = useApp();
+  const { openEmergency, setPrivacyOpen, syncError } = useApp();
   return (
     <div className="min-h-[100dvh] bg-background">
       <div className="border-b border-[hsl(var(--tier-amber)/.4)] bg-[hsl(var(--secondary)/.25)] px-4 py-1.5 text-center font-mono text-[11px] tracking-wide text-foreground/80" data-testid="text-demo-notice">
@@ -86,7 +86,10 @@ export function Shell({ children }: { children: ReactNode }) {
           </button>
         </div>
       </header>
-      <main>{children}</main>
+      <main>
+        {syncError && <p role="status" className="mx-auto max-w-6xl px-4 pt-2 text-sm text-muted-foreground">{syncError}</p>}
+        {children}
+      </main>
       <footer className="mx-auto max-w-6xl px-4 pb-10 pt-16 text-xs text-muted-foreground">
         <div className="phulkari mb-6 h-2 rounded-full opacity-70" />
         Nourish360 uses invented profiles and illustrative Sonipat locations. It does not diagnose, treat or dispatch. In any emergency, dial <a href="tel:108" className="font-semibold text-[hsl(var(--tier-red))] underline">108</a>.

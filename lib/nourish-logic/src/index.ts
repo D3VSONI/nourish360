@@ -5,6 +5,19 @@ export * from './routing';
 type Dated<T, K extends keyof T> = Omit<T, K> & { [P in K]: string };
 export type WireVisit = Dated<Visit, 'created_at'>;
 export type WireAssessment = Omit<AssessmentInput, 'recorded_at'> & { recorded_at?: string | Date };
+const ranges: Record<keyof Vitals,[number,number]> = {bp_sys:[35,300],bp_dia:[20,200],hb:[1,25],weight_kg:[0.2,320],temp_c:[25,46],resp_rate:[0,150],muac_cm:[3,65]};
+export function validateAssessment(input: WireAssessment): string | undefined {
+  if (!Object.keys(input.vitals).length && !input.symptoms.length) return 'Enter a sample reading or select a symptom.';
+  for (const [key,value] of Object.entries(input.vitals)) {
+    const range = ranges[key as keyof Vitals];
+    if (!range || !Number.isFinite(value) || value<range[0] || value>range[1]) return 'A sample vital is outside the accepted entry range.';
+  }
+  if (input.recorded_at !== undefined) {
+    const date = new Date(input.recorded_at);
+    if (!Number.isFinite(+date) || +date>Date.now()+300_000 || date.getUTCFullYear()<2020) return 'Enter a valid assessment date.';
+  }
+  return undefined;
+}
 const round = (n: number) => Math.round(n * 10) / 10;
 
 export function evaluate(patient: Patient, input: WireAssessment, prior: WireVisit[], facilities?: Facility[]): WireVisit {
