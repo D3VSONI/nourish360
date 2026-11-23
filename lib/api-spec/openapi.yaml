@@ -1,0 +1,1253 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Api",
+    "version": "0.1.0",
+    "description": "Nourish360 synthetic health workflow and dispatch simulation"
+  },
+  "servers": [
+    {
+      "url": "/api"
+    }
+  ],
+  "paths": {
+    "/healthz": {
+      "get": {
+        "operationId": "healthCheck",
+        "tags": [
+          "health"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/catalog": {
+      "get": {
+        "operationId": "getCatalog",
+        "tags": [
+          "health"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Catalog"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/demo/session": {
+      "post": {
+        "operationId": "startDemo",
+        "tags": [
+          "health"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatientRecord"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DemoSelection"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session": {
+      "get": {
+        "operationId": "getSession",
+        "tags": [
+          "health"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatientRecord"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "endSession",
+        "tags": [
+          "health"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionReceipt"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "operationId": "registerPatient",
+        "tags": [
+          "health"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Challenge"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistrationInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/send-otp": {
+      "post": {
+        "operationId": "sendOtp",
+        "tags": [
+          "health"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Challenge"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OtpRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/verify-otp": {
+      "post": {
+        "operationId": "verifyOtp",
+        "tags": [
+          "health"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatientRecord"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OtpVerification"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/visits/analyze": {
+      "post": {
+        "operationId": "analyzeVisit",
+        "tags": [
+          "health"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Visit"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sync": {
+      "post": {
+        "operationId": "syncVisits",
+        "tags": [
+          "health"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncResult"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyncBatch"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/visits/{id}/review": {
+      "post": {
+        "operationId": "requestReview",
+        "tags": [
+          "health"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionReceipt"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/ambulance/book": {
+      "post": {
+        "operationId": "bookAmbulance",
+        "tags": [
+          "health"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Booking"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BookingInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ambulance/{id}": {
+      "get": {
+        "operationId": "getAmbulance",
+        "tags": [
+          "health"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Booking"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/ambulance/{id}/family-call": {
+      "post": {
+        "operationId": "triggerFamilyCall",
+        "tags": [
+          "health"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionReceipt"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/privacy/export/{healthId}": {
+      "get": {
+        "operationId": "exportRecord",
+        "tags": [
+          "health"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivacyExport"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "healthId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^N360-SNP-[A-Z0-9]{4,8}$"
+            }
+          }
+        ]
+      }
+    },
+    "/privacy/erase/{healthId}": {
+      "delete": {
+        "operationId": "eraseRecord",
+        "tags": [
+          "health"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionReceipt"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "healthId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^N360-SNP-[A-Z0-9]{4,8}$"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HealthStatus": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "PatientType": {
+        "type": "string",
+        "enum": [
+          "CHILD",
+          "PREGNANT_LADY",
+          "MOTHER"
+        ]
+      },
+      "RiskTier": {
+        "type": "string",
+        "enum": [
+          "GREEN",
+          "AMBER",
+          "RED"
+        ]
+      },
+      "ClinicalProfile": {
+        "type": "object",
+        "properties": {
+          "dob_months": {
+            "type": "integer"
+          },
+          "birth_weight_kg": {
+            "type": "number"
+          },
+          "last_weight_kg": {
+            "type": "number"
+          },
+          "immunization_status": {
+            "type": "string"
+          },
+          "age": {
+            "type": "integer"
+          },
+          "lmp_date": {
+            "type": "string"
+          },
+          "gestational_weeks": {
+            "type": "integer"
+          },
+          "gravida": {
+            "type": "integer"
+          },
+          "blood_group": {
+            "type": "string"
+          },
+          "delivery_date": {
+            "type": "string"
+          },
+          "days_postpartum": {
+            "type": "integer"
+          },
+          "delivery_type": {
+            "type": "string",
+            "enum": [
+              "Normal",
+              "C-Section"
+            ]
+          }
+        },
+        "required": []
+      },
+      "RegistrationInput": {
+        "type": "object",
+        "properties": {
+          "patient_type": {
+            "$ref": "#/components/schemas/PatientType"
+          },
+          "full_name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100
+          },
+          "phone_number": {
+            "type": "string",
+            "pattern": "^(?:\\+91)?[0-9]{10}$"
+          },
+          "village": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100
+          },
+          "guardian_name": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "guardian_consent": {
+            "type": "boolean"
+          },
+          "consent": {
+            "type": "boolean"
+          },
+          "profile": {
+            "$ref": "#/components/schemas/ClinicalProfile"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "sms",
+              "call"
+            ]
+          }
+        },
+        "required": [
+          "patient_type",
+          "full_name",
+          "phone_number",
+          "village",
+          "consent",
+          "profile",
+          "channel"
+        ]
+      },
+      "OtpRequest": {
+        "type": "object",
+        "properties": {
+          "health_id": {
+            "type": "string",
+            "pattern": "^N360-SNP-[A-Z0-9]{4,8}$"
+          },
+          "phone_number": {
+            "type": "string",
+            "maxLength": 15
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "sms",
+              "call"
+            ]
+          }
+        },
+        "required": [
+          "health_id",
+          "phone_number",
+          "channel"
+        ]
+      },
+      "OtpVerification": {
+        "type": "object",
+        "properties": {
+          "health_id": {
+            "type": "string",
+            "pattern": "^N360-SNP-[A-Z0-9]{4,8}$"
+          },
+          "challenge_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string",
+            "pattern": "^[0-9]{6}$"
+          }
+        },
+        "required": [
+          "health_id",
+          "challenge_id",
+          "code"
+        ]
+      },
+      "Challenge": {
+        "type": "object",
+        "properties": {
+          "health_id": {
+            "type": "string",
+            "pattern": "^N360-SNP-[A-Z0-9]{4,8}$"
+          },
+          "challenge_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "sms",
+              "call"
+            ]
+          },
+          "demo_code": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "health_id",
+          "challenge_id",
+          "channel"
+        ]
+      },
+      "Patient": {
+        "type": "object",
+        "properties": {
+          "health_id": {
+            "type": "string",
+            "pattern": "^N360-SNP-[A-Z0-9]{4,8}$"
+          },
+          "patient_type": {
+            "$ref": "#/components/schemas/PatientType"
+          },
+          "full_name": {
+            "type": "string"
+          },
+          "masked_phone": {
+            "type": "string"
+          },
+          "village": {
+            "type": "string"
+          },
+          "profile": {
+            "$ref": "#/components/schemas/ClinicalProfile"
+          },
+          "is_demo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "health_id",
+          "patient_type",
+          "full_name",
+          "masked_phone",
+          "village",
+          "profile",
+          "is_demo"
+        ]
+      },
+      "Vitals": {
+        "type": "object",
+        "properties": {
+          "bp_sys": {
+            "type": "number"
+          },
+          "bp_dia": {
+            "type": "number"
+          },
+          "hb": {
+            "type": "number"
+          },
+          "weight_kg": {
+            "type": "number"
+          },
+          "temp_c": {
+            "type": "number"
+          },
+          "resp_rate": {
+            "type": "number"
+          },
+          "muac_cm": {
+            "type": "number"
+          }
+        },
+        "required": []
+      },
+      "AssessmentInput": {
+        "type": "object",
+        "properties": {
+          "mutation_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "vitals": {
+            "$ref": "#/components/schemas/Vitals"
+          },
+          "symptoms": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "maxItems": 20
+          },
+          "recorded_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "mutation_id",
+          "vitals",
+          "symptoms"
+        ]
+      },
+      "Forecast": {
+        "type": "object",
+        "properties": {
+          "condition": {
+            "type": "string"
+          },
+          "probability_level": {
+            "type": "string"
+          },
+          "timeline": {
+            "type": "string"
+          },
+          "clinical_reason": {
+            "type": "string"
+          },
+          "preventive_action": {
+            "type": "string"
+          },
+          "hindi": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "condition",
+          "probability_level",
+          "timeline",
+          "clinical_reason",
+          "preventive_action",
+          "hindi"
+        ]
+      },
+      "Village": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "name",
+          "lat",
+          "lng"
+        ]
+      },
+      "Facility": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "tier": {
+            "type": "string"
+          },
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          },
+          "distance_km": {
+            "type": "number"
+          },
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "blood_bank_status": {
+            "type": "string"
+          },
+          "nicus_available": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "tier",
+          "lat",
+          "lng",
+          "distance_km",
+          "capabilities",
+          "blood_bank_status",
+          "nicus_available"
+        ]
+      },
+      "Bypass": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "distance_km": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "name",
+          "reason",
+          "distance_km"
+        ]
+      },
+      "Referral": {
+        "type": "object",
+        "properties": {
+          "facility": {
+            "$ref": "#/components/schemas/Facility"
+          },
+          "bypassed": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Bypass"
+            }
+          }
+        },
+        "required": [
+          "facility",
+          "bypassed"
+        ]
+      },
+      "Visit": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "vitals": {
+            "$ref": "#/components/schemas/Vitals"
+          },
+          "symptoms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "risk_tier": {
+            "$ref": "#/components/schemas/RiskTier"
+          },
+          "triggered_rules": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "six_month_forecast": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Forecast"
+            }
+          },
+          "trend": {
+            "type": "string"
+          },
+          "trend_details": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "next_step": {
+            "type": "string"
+          },
+          "routed_facility": {
+            "$ref": "#/components/schemas/Referral"
+          }
+        },
+        "required": [
+          "id",
+          "created_at",
+          "vitals",
+          "symptoms",
+          "risk_tier",
+          "triggered_rules",
+          "six_month_forecast",
+          "trend",
+          "trend_details",
+          "next_step"
+        ]
+      },
+      "PatientRecord": {
+        "type": "object",
+        "properties": {
+          "patient": {
+            "$ref": "#/components/schemas/Patient"
+          },
+          "visits": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Visit"
+            }
+          }
+        },
+        "required": [
+          "patient",
+          "visits"
+        ]
+      },
+      "SyncBatch": {
+        "type": "object",
+        "properties": {
+          "visits": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssessmentInput"
+            },
+            "maxItems": 50
+          }
+        },
+        "required": [
+          "visits"
+        ]
+      },
+      "SyncResult": {
+        "type": "object",
+        "properties": {
+          "synced_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "visits": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Visit"
+            }
+          }
+        },
+        "required": [
+          "synced_ids",
+          "visits"
+        ]
+      },
+      "DemoCase": {
+        "type": "object",
+        "properties": {
+          "health_id": {
+            "type": "string",
+            "pattern": "^N360-SNP-[A-Z0-9]{4,8}$"
+          },
+          "patient_type": {
+            "$ref": "#/components/schemas/PatientType"
+          },
+          "label": {
+            "type": "string"
+          },
+          "village": {
+            "type": "string"
+          },
+          "risk_tier": {
+            "$ref": "#/components/schemas/RiskTier"
+          }
+        },
+        "required": [
+          "health_id",
+          "patient_type",
+          "label",
+          "village",
+          "risk_tier"
+        ]
+      },
+      "DemoSelection": {
+        "type": "object",
+        "properties": {
+          "health_id": {
+            "type": "string",
+            "pattern": "^N360-SNP-[A-Z0-9]{4,8}$"
+          }
+        },
+        "required": [
+          "health_id"
+        ]
+      },
+      "Catalog": {
+        "type": "object",
+        "properties": {
+          "villages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Village"
+            }
+          },
+          "demo_cases": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DemoCase"
+            }
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "demo"
+            ]
+          }
+        },
+        "required": [
+          "villages",
+          "demo_cases",
+          "mode"
+        ]
+      },
+      "BookingInput": {
+        "type": "object",
+        "properties": {
+          "patient_type": {
+            "$ref": "#/components/schemas/PatientType"
+          },
+          "emergency_type": {
+            "type": "string"
+          },
+          "pickup_village": {
+            "type": "string"
+          },
+          "pickup_lat": {
+            "type": "number"
+          },
+          "pickup_lng": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "patient_type",
+          "emergency_type",
+          "pickup_village"
+        ]
+      },
+      "MapPoint": {
+        "type": "object",
+        "properties": {
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "lat",
+          "lng"
+        ]
+      },
+      "Booking": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "booking_code": {
+            "type": "string"
+          },
+          "patient_type": {
+            "$ref": "#/components/schemas/PatientType"
+          },
+          "emergency_type": {
+            "type": "string"
+          },
+          "pickup_village": {
+            "type": "string"
+          },
+          "pickup_lat": {
+            "type": "number"
+          },
+          "pickup_lng": {
+            "type": "number"
+          },
+          "destination": {
+            "$ref": "#/components/schemas/Facility"
+          },
+          "bypassed_facilities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Bypass"
+            }
+          },
+          "driver_name": {
+            "type": "string"
+          },
+          "driver_phone": {
+            "type": "string"
+          },
+          "ambulance_number": {
+            "type": "string"
+          },
+          "eta_seconds": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DISPATCHED",
+              "EN_ROUTE",
+              "ARRIVED"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "route": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MapPoint"
+            }
+          },
+          "guide": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "simulation": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "booking_code",
+          "patient_type",
+          "emergency_type",
+          "pickup_village",
+          "pickup_lat",
+          "pickup_lng",
+          "destination",
+          "bypassed_facilities",
+          "driver_name",
+          "driver_phone",
+          "ambulance_number",
+          "eta_seconds",
+          "status",
+          "created_at",
+          "route",
+          "guide",
+          "simulation"
+        ]
+      },
+      "ActionReceipt": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "reference": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "PrivacyExport": {
+        "type": "object",
+        "properties": {
+          "patient": {
+            "$ref": "#/components/schemas/Patient"
+          },
+          "visits": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Visit"
+            }
+          },
+          "consent": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "audit": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        },
+        "required": [
+          "patient",
+          "visits",
+          "consent",
+          "audit"
+        ]
+      }
+    }
+  }
+}
