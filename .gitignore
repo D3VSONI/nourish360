@@ -63,3 +63,7 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+/.replit
+/.replitignore
+/replit.md
+/artifacts/*/.replit-artifact/
