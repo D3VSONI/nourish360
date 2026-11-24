@@ -1,0 +1,14 @@
+{
+  "services": {
+    "frontend": {
+      "root": "artifacts/nourish360"
+    },
+    "backend": {
+      "root": "artifacts/api-server"
+    }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": { "service": "backend" } },
+    { "source": "/(.*)", "destination": { "service": "frontend" } }
+  ]
+}
