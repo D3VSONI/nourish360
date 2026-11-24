@@ -9,7 +9,7 @@ import type { ClinicalProfile } from './clinicalProfile';
 import type { PatientType } from './patientType';
 
 export interface Patient {
-  /** @pattern ^N360-SNP-[A-Z0-9]{4,8}$ */
+  /** @pattern ^(?:[1-7]|N360-SNP-[A-Z0-9]{4,8})$ */
   health_id: string;
   patient_type: PatientType;
   full_name: string;

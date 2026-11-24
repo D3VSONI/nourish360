@@ -7,6 +7,7 @@ import { EmergencySheet } from '@/components/emergency-sheet';
 import { PrivacyDrawer } from '@/components/privacy-drawer';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { Switch } from '@/components/ui/switch';
 
 /** Real emergency: always tel:108. Never a simulation. */
 export function Call108({ className, compact, testId = 'link-call-108' }: { className?: string; compact?: boolean; testId?: string }) {
@@ -72,22 +73,26 @@ function OfflineToggle() {
   const { tr } = useLang();
   const { toast } = useToast();
   return (
-    <button
-      onClick={() => {
+    <div className="inline-flex min-h-[52px] items-center gap-3 rounded-full border-2 border-border bg-card px-3 text-sm font-semibold">
+      {forcedOffline ? <WifiOff className="h-4 w-4 text-[hsl(var(--tier-amber))]" /> : <Wifi className="h-4 w-4" />}
+      <span>{tr('Work offline', 'ऑफ़लाइन अभ्यास')}</span>
+      <Switch
+        checked={forcedOffline}
+        onCheckedChange={(next) => {
         toggleOffline();
-        toast({ title: forcedOffline ? tr('Demo offline mode off', 'डेमो ऑफ़लाइन मोड बंद') : tr('Demo offline mode on', 'डेमो ऑफ़लाइन मोड चालू'), description: tr('Simulated network only. Your phone is unchanged.', 'सिर्फ़ अभ्यास नेटवर्क। फ़ोन पर कोई बदलाव नहीं।') });
+          toast({
+            title: next ? tr('Offline practice on', 'ऑफ़लाइन अभ्यास चालू') : tr('Offline practice off', 'ऑफ़लाइन अभ्यास बंद'),
+            description: tr('Only this app is offline; your device stays connected.', 'सिर्फ़ यह ऐप ऑफ़लाइन है; आपका फ़ोन नेटवर्क से जुड़ा है।'),
+          });
       }}
-      role="switch"
-      aria-checked={forcedOffline}
-      data-testid="button-toggle-offline"
-      className={cn('press inline-flex min-h-[52px] items-center gap-2 rounded-full border-2 px-3 text-sm font-semibold', forcedOffline ? 'border-[hsl(var(--tier-amber))] bg-[hsl(var(--tier-amber)/.14)]' : 'border-border bg-card hover:bg-accent')}
-    >
-      {forcedOffline ? <WifiOff className="h-4 w-4" /> : <Wifi className="h-4 w-4" />}
-      {tr('Demo offline', 'डेमो ऑफ़लाइन')}
-      <span aria-hidden className={cn('relative h-5 w-9 rounded-full transition-colors', forcedOffline ? 'bg-[hsl(var(--tier-amber))]' : 'bg-foreground/25')}>
-        <span className={cn('absolute top-0.5 h-4 w-4 rounded-full bg-card transition-transform', forcedOffline ? 'translate-x-[18px]' : 'translate-x-0.5')} />
-      </span>
-    </button>
+        aria-label={tr('Simulate an offline connection', 'ऑफ़लाइन नेटवर्क का अभ्यास करें')}
+        data-testid="button-toggle-offline"
+        className={cn(
+          'data-[state=checked]:bg-[hsl(var(--tier-amber))] data-[state=unchecked]:bg-foreground/25',
+          'focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
+        )}
+      />
+    </div>
   );
 }
 
@@ -96,8 +101,8 @@ export function Shell({ children }: { children: ReactNode }) {
   const { tr,lang } = useLang();
   return (
     <div className="min-h-[100dvh] bg-background">
-      <div className="border-b-2 border-[hsl(var(--tier-amber))] bg-[hsl(var(--tier-amber)/.12)] px-4 py-2 text-center text-sm font-medium" data-testid="text-demo-notice">
-        {tr('DEMO ONLY · invented records · not a medical diagnosis · ambulance drill is a simulation', 'सिर्फ़ डेमो · काल्पनिक रिकॉर्ड · यह डॉक्टर की जाँच नहीं · एम्बुलेंस सिर्फ अभ्यास है')}
+      <div className="border-b-2 border-[hsl(var(--tier-amber))] bg-[hsl(var(--tier-amber)/.12)] px-4 py-2 text-center text-sm font-medium" data-testid="text-preview-notice">
+        {tr('TRAINING PREVIEW · sample records · not a medical diagnosis · referral routes are simulated', 'प्रशिक्षण पूर्वावलोकन · नमूना रिकॉर्ड · यह चिकित्सीय निदान नहीं · रेफ़रल मार्ग अभ्यास के लिए हैं')}
       </div>
       <header className="sticky top-0 z-40 border-b-2 border-border bg-background/95 backdrop-blur" data-testid="header-main">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-4 py-3">
@@ -109,7 +114,7 @@ export function Shell({ children }: { children: ReactNode }) {
               </svg>
             </span>
             <span className="leading-tight">
-              <span className="block text-xl font-extrabold text-primary">Notion360</span>
+               <span className="block text-xl font-extrabold text-primary">Nourish360</span>
               <span className="text-xs font-semibold text-muted-foreground">{tr('Sonipat field check-up', 'सोनीपत · स्वास्थ्य जाँच')}</span>
             </span>
           </Link>
@@ -137,7 +142,7 @@ export function Shell({ children }: { children: ReactNode }) {
       </main>
       <footer className="mx-auto max-w-6xl px-4 pb-24 pt-16 text-sm text-muted-foreground sm:pb-10">
         <div className="phulkari mb-6 h-1" />
-        {tr('Notion360 uses invented profiles and illustrative Sonipat locations. It does not diagnose, treat or dispatch. In any emergency, dial', 'Notion360 काल्पनिक प्रोफ़ाइल इस्तेमाल करता है। यह इलाज या एम्बुलेंस नहीं भेजता। किसी भी आपातकाल में डायल करें')}{' '}
+        {tr('Nourish360 uses sample profiles and illustrative Sonipat locations. It does not diagnose, treat or dispatch. In any emergency, dial', 'Nourish360 नमूना प्रोफ़ाइल और सोनीपत के उदाहरण वाले स्थान इस्तेमाल करता है। यह निदान, इलाज या एम्बुलेंस नहीं भेजता। किसी भी आपातकाल में डायल करें')}{' '}
         <a href="tel:108" data-testid="link-footer-108" className="font-bold text-[hsl(var(--tier-red))] underline">108</a>.
       </footer>
       {/* Mobile: real emergency always within thumb reach */}

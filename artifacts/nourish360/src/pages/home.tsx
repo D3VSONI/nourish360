@@ -3,7 +3,7 @@ import { ArrowRight, Siren, TriangleAlert } from 'lucide-react';
 import type { PatientType } from '@workspace/api-client-react';
 import { useApp, ROLE_META } from '@/lib/store';
 import { useLang, roleLabel } from '@/lib/i18n';
-import { DemoBar } from '@/components/demo-bar';
+import { PatientAttentionPanel } from '@/components/patient-attention-panel';
 import { ActiveDrills } from '@/components/active-drills';
 import { Call108 } from '@/components/shell';
 import { RoleArt } from '@/components/role-art';
@@ -16,7 +16,7 @@ const ACCENT: Record<PatientType, string> = {
 const subtitles:Record<PatientType,readonly [string,string]>={CHILD:['Ages 0–5 · Growth & fever','0–5 साल · बढ़त और बुखार'],PREGNANT_LADY:['Pregnancy & blood pressure','गर्भ और बीपी'],MOTHER:['After-delivery care','प्रसव के बाद की देखभाल']};
 
 export default function Home() {
-  const { record, openEmergency } = useApp();
+  const { openEmergency } = useApp();
   const { lang, tr } = useLang();
   return (
     <div className="mx-auto max-w-6xl px-4">
@@ -26,12 +26,9 @@ export default function Home() {
           {tr('Who needs a health check today?', 'आज किसकी जांच करनी है?')}
         </h1>
         {lang === 'en' && <p lang="hi" className="mt-1 text-xl font-semibold text-primary md:text-2xl">आज किसकी जांच करनी है?</p>}
-        {record && (
-          <Link href="/results" data-testid="link-continue" className="tap tap-primary mt-6 w-full sm:w-auto">
-            {tr(`Continue with ${record.patient.full_name}`, `${record.patient.full_name} के साथ जारी रखें`)} <ArrowRight className="h-5 w-5" />
-          </Link>
-        )}
       </section>
+
+      <section className="mt-7"><PatientAttentionPanel /></section>
 
       <section className="mt-8 grid gap-5 md:grid-cols-3" aria-label={tr('Choose who to check', 'किसकी जांच, चुनें')}>
         {(Object.keys(ROLE_META) as PatientType[]).map((r, i) => (
@@ -74,7 +71,6 @@ export default function Home() {
       </section>
 
       <div className="mt-8"><ActiveDrills /></div>
-      <section className="mt-8"><DemoBar /></section>
     </div>
   );
 }

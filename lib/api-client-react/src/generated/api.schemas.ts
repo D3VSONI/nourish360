@@ -89,7 +89,7 @@ export const OtpRequestChannel = {
 } as const;
 
 export interface OtpRequest {
-  /** @pattern ^N360-SNP-[A-Z0-9]{4,8}$ */
+  /** @pattern ^(?:[1-7]|N360-SNP-[A-Z0-9]{4,8})$ */
   health_id: string;
   /** @maxLength 15 */
   phone_number: string;
@@ -97,10 +97,10 @@ export interface OtpRequest {
 }
 
 export interface OtpVerification {
-  /** @pattern ^N360-SNP-[A-Z0-9]{4,8}$ */
+  /** @pattern ^(?:[1-7]|N360-SNP-[A-Z0-9]{4,8})$ */
   health_id: string;
   challenge_id: string;
-  /** @pattern ^[0-9]{6}$ */
+  /** @pattern ^[0-9]{4,6}$ */
   code: string;
 }
 
@@ -113,15 +113,14 @@ export const ChallengeChannel = {
 } as const;
 
 export interface Challenge {
-  /** @pattern ^N360-SNP-[A-Z0-9]{4,8}$ */
+  /** @pattern ^(?:[1-7]|N360-SNP-[A-Z0-9]{4,8})$ */
   health_id: string;
   challenge_id: string;
   channel: ChallengeChannel;
-  demo_code?: string;
 }
 
 export interface Patient {
-  /** @pattern ^N360-SNP-[A-Z0-9]{4,8}$ */
+  /** @pattern ^(?:[1-7]|N360-SNP-[A-Z0-9]{4,8})$ */
   health_id: string;
   patient_type: PatientType;
   full_name: string;
@@ -222,7 +221,7 @@ export interface SyncResult {
 }
 
 export interface DemoCase {
-  /** @pattern ^N360-SNP-[A-Z0-9]{4,8}$ */
+  /** @pattern ^(?:[1-7]|N360-SNP-[A-Z0-9]{4,8})$ */
   health_id: string;
   patient_type: PatientType;
   label: string;
@@ -231,7 +230,7 @@ export interface DemoCase {
 }
 
 export interface DemoSelection {
-  /** @pattern ^N360-SNP-[A-Z0-9]{4,8}$ */
+  /** @pattern ^(?:[1-7]|N360-SNP-[A-Z0-9]{4,8})$ */
   health_id: string;
 }
 
@@ -298,6 +297,48 @@ export interface ActionReceipt {
   message: string;
   reference?: string;
 }
+
+export type EscalationAuthority = typeof EscalationAuthority[keyof typeof EscalationAuthority];
+
+
+export const EscalationAuthority = {
+  PHC_MEDICAL_OFFICER: 'PHC_MEDICAL_OFFICER',
+  CHC_MEDICAL_OFFICER: 'CHC_MEDICAL_OFFICER',
+  DISTRICT_MEDICAL_OFFICER: 'DISTRICT_MEDICAL_OFFICER',
+} as const;
+
+export type EscalationTicketStatus = typeof EscalationTicketStatus[keyof typeof EscalationTicketStatus];
+
+
+export const EscalationTicketStatus = {
+  PENDING: 'PENDING',
+  ACTION_TAKEN: 'ACTION_TAKEN',
+} as const;
+
+export interface EscalationTicketInput {
+  /** @pattern ^(?:[1-7]|N360-SNP-[A-Z0-9]{4,8})$ */
+  health_id: string;
+  authority: EscalationAuthority;
+}
+
+export interface EscalationTicket {
+  id: string;
+  /** @pattern ^(?:[1-7]|N360-SNP-[A-Z0-9]{4,8})$ */
+  health_id: string;
+  patient_name: string;
+  patient_type: PatientType;
+  village: string;
+  authority: EscalationAuthority;
+  risk_tier: RiskTier;
+  reason: string;
+  status: EscalationTicketStatus;
+  /** @nullable */
+  action_note: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type EscalationTicketList = EscalationTicket[];
 
 export type PrivacyExportConsent = { [key: string]: unknown };
 

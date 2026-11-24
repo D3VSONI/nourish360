@@ -39,7 +39,7 @@ export async function account(req:Request, optional = false): Promise<string | u
       if (payload.sub && uuid.test(payload.sub)) return payload.sub;
     } catch { /* invalid or expired cookies are not accepted */ }
   }
-  if (!optional) throw new AppError(401,'Sign in to a demo profile first.');
+  if (!optional) throw new AppError(401,'Sign in to a profile first.');
   return undefined;
 }
 
@@ -59,29 +59,29 @@ clean.unref();
 
 export async function issue(tx:Tx, userId:string|null, healthId:string, device:string, channel:'sms'|'call'): Promise<Challenge> {
   const id = randomUUID();
-  const code = String(randomInt(100_000, 1_000_000));
+  const code = process.env.NODE_ENV === 'development' ? '1234' : String(randomInt(100_000, 1_000_000));
   const subjectHash = digest(`otp-subject:${healthId}`);
   const browserHash = digest(`otp-browser:${device}`);
   await tx.delete(otpChallenges).where(lt(otpChallenges.expiresAt,new Date()));
   await tx.delete(otpChallenges).where(and(eq(otpChallenges.subjectHash,subjectHash),eq(otpChallenges.browserHash,browserHash)));
   await tx.insert(otpChallenges).values({id,userId,subjectHash,browserHash,proof:digest(`otp:${id}:${code}`),expiresAt:new Date(now()+5*60_000)});
-  return { health_id:healthId, challenge_id:id, channel, demo_code:code };
+  return { health_id:healthId, challenge_id:id, channel };
 }
 export async function consume<T>(req:Request,id:string,healthId:string,code:string, verify:(tx:Tx,userId:string,device:string)=>Promise<T>): Promise<T> {
   const device = browserId(req);
-  if (!device) throw new AppError(400,'The demo code expired. Request a new one.');
+  if (!device) throw new AppError(400,'The one-time code expired. Request a new one.');
   const result = await db.transaction(async tx => {
     const [candidate] = await tx.select({userId:otpChallenges.userId}).from(otpChallenges).where(eq(otpChallenges.id,id));
     // Serialize with reissue and erasure, which also lock the account before modifying challenges.
     if (candidate?.userId) await tx.select({id:users.id}).from(users).where(eq(users.id,candidate.userId)).for('update');
     const [c] = await tx.select().from(otpChallenges).where(eq(otpChallenges.id,id)).for('update');
     if (!c || c.expiresAt.getTime() <= now() || c.subjectHash !== digest(`otp-subject:${healthId}`) || c.browserHash !== digest(`otp-browser:${device}`)) {
-      return { error:'The demo code expired. Request a new one.' } as const;
+      return { error:'The one-time code expired. Request a new one.' } as const;
     }
     const matches = timingSafeEqual(Buffer.from(c.proof),Buffer.from(digest(`otp:${id}:${code}`)));
     if (matches || c.attempts >= 4) await tx.delete(otpChallenges).where(eq(otpChallenges.id,id));
     else await tx.update(otpChallenges).set({attempts:c.attempts+1}).where(eq(otpChallenges.id,id));
-    if (!matches || !c.userId) return { error:'The demo code or login details did not match.' } as const;
+    if (!matches || !c.userId) return { error:'The code or profile details did not match.' } as const;
     return { value:await verify(tx,c.userId,device) };
   });
   if ('value' in result) return result.value as T;
@@ -95,13 +95,13 @@ const groups = new Set(['A+','A-','B+','B-','AB+','AB-','O+','O-','Unknown']);
 export function profileFor(body: RegistrationInput) {
   const p = body.profile;
   if (!body.consent || (body.patient_type==='CHILD' && (!body.guardian_consent || !body.guardian_name?.trim()))) throw new AppError(400,'Explicit consent is required, including a guardian’s name and consent for a child.');
-  if (!syntheticPhone(body.phone_number)) throw new AppError(400,'Use a fictional demo number, for example 0000000000. Do not enter a real phone number.');
-  if (body.full_name.trim().length < 2 || body.village.trim().length < 2) throw new AppError(400,'Enter a demo alias and select a village.');
+  if (!syntheticPhone(body.phone_number)) throw new AppError(400,'Use a reserved preview number, for example 0000000000. No real calls or messages are sent.');
+  if (body.full_name.trim().length < 2 || body.village.trim().length < 2) throw new AppError(400,'Enter a patient name and select a village.');
   if (body.patient_type==='CHILD') {
-    if (!inRange(p.dob_months,0,60) || !inRange(p.birth_weight_kg,0.2,10) || !inRange(p.last_weight_kg,0.2,50)) throw new AppError(400,'Enter the child’s demo age, birth weight and last recorded weight.');
+    if (!inRange(p.dob_months,0,60) || !inRange(p.birth_weight_kg,0.2,10) || !inRange(p.last_weight_kg,0.2,50)) throw new AppError(400,'Enter the child’s age, birth weight and last recorded weight.');
     return {dob_months:p.dob_months,birth_weight_kg:p.birth_weight_kg,last_weight_kg:p.last_weight_kg,immunization_status:'Not recorded'};
   }
-  if (!inRange(p.age,12,65) || !p.blood_group || !groups.has(p.blood_group)) throw new AppError(400,'Enter the demo age and select a blood group.');
+  if (!inRange(p.age,12,65) || !p.blood_group || !groups.has(p.blood_group)) throw new AppError(400,'Enter the age and select a blood group.');
   if (body.patient_type==='PREGNANT_LADY') {
     if ((!inRange(p.gestational_weeks,1,45) && !dateOnly(p.lmp_date)) || !inRange(p.gravida,1,25)) throw new AppError(400,'Enter gestational weeks or last menstrual date, and pregnancy count.');
     return {age:p.age,blood_group:p.blood_group,gestational_weeks:p.gestational_weeks,lmp_date:dateOnly(p.lmp_date)?p.lmp_date:undefined,gravida:p.gravida};

@@ -20,8 +20,8 @@ function Router() {
   const [path]=useLocation();
   const {tr}=useLang();
   useEffect(()=>{
-    const title=path==='/'?tr('Health check-ups','स्वास्थ्य जाँच'):path.startsWith('/start/')?tr('Demo profile','डेमो प्रोफ़ाइल'):path==='/assess'?tr('Check-up','जाँच'):path==='/results'?tr('Visit results','जाँच का नतीजा'):path.startsWith('/track/')?tr('Ambulance practice','एम्बुलेंस अभ्यास'):tr('Page not found','पेज नहीं मिला');
-    document.title=`${title} · Notion360`;
+    const title=path==='/'?tr('Health check-ups','स्वास्थ्य जाँच'):path.startsWith('/start/')?tr('Patient profile','मरीज़ की प्रोफ़ाइल'):path==='/assess'?tr('Check-up','जाँच'):path==='/results'?tr('Visit results','जाँच का नतीजा'):path.startsWith('/track/')?tr('Ambulance practice','एम्बुलेंस अभ्यास'):tr('Page not found','पेज नहीं मिला');
+    document.title=`${title} · Nourish360`;
   },[path,tr]);
   return (
     <Shell>

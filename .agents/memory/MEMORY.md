@@ -1,1 +1,2 @@
 - [Offline preview testing](offline-preview-testing.md) — test a full offline reload; the Replit Vite preview needs a narrowly scoped runtime-cache exception.
+- [Preview registration failures](preview-registration.md) — an empty artifact list can coexist with working preview routing; verify the actual public URL.

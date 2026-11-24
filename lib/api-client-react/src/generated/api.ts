@@ -33,6 +33,9 @@ import type {
   Catalog,
   Challenge,
   DemoSelection,
+  EscalationTicket,
+  EscalationTicketInput,
+  EscalationTicketList,
   HealthStatus,
   OtpRequest,
   OtpVerification,
@@ -987,6 +990,183 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(getRequestReviewMutationOptions(options), queryClient);
     }
 
+export const getListEscalationTicketsUrl = () => {
+
+
+
+
+  return `/api/escalation-tickets`
+}
+
+export const listEscalationTickets = async ( options?: Parameters<typeof customFetch>[1]): Promise<EscalationTicketList> => {
+
+  return customFetch<EscalationTicketList>(getListEscalationTicketsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListEscalationTicketsQueryKey = () => {
+    return [
+    `/api/escalation-tickets`
+    ] as const;
+    }
+
+
+export const getListEscalationTicketsQueryOptions = <TData = Awaited<ReturnType<typeof listEscalationTickets>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEscalationTickets>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListEscalationTicketsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listEscalationTickets>>> = ({ signal }) => listEscalationTickets({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listEscalationTickets>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListEscalationTicketsQueryResult = NonNullable<Awaited<ReturnType<typeof listEscalationTickets>>>
+export type ListEscalationTicketsQueryError = ErrorType<unknown>
+
+
+export function useListEscalationTickets<TData = Awaited<ReturnType<typeof listEscalationTickets>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEscalationTickets>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listEscalationTickets>>,
+          TError,
+          Awaited<ReturnType<typeof listEscalationTickets>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListEscalationTickets<TData = Awaited<ReturnType<typeof listEscalationTickets>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEscalationTickets>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listEscalationTickets>>,
+          TError,
+          Awaited<ReturnType<typeof listEscalationTickets>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListEscalationTickets<TData = Awaited<ReturnType<typeof listEscalationTickets>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEscalationTickets>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useListEscalationTickets<TData = Awaited<ReturnType<typeof listEscalationTickets>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEscalationTickets>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListEscalationTicketsQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateEscalationTicketUrl = () => {
+
+
+
+
+  return `/api/escalation-tickets`
+}
+
+export const createEscalationTicket = async (escalationTicketInput: EscalationTicketInput, options?: Parameters<typeof customFetch>[1]): Promise<EscalationTicket> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<EscalationTicket>(getCreateEscalationTicketUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(escalationTicketInput)
+  }
+);}
+
+
+
+
+
+export const getCreateEscalationTicketMutationKey = () => ['createEscalationTicket'] as const;
+
+export const getCreateEscalationTicketMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createEscalationTicket>>, TError,CreateEscalationTicketMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createEscalationTicket>>, TError,CreateEscalationTicketMutationVariables, TContext> => {
+
+const mutationKey = getCreateEscalationTicketMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createEscalationTicket>>, CreateEscalationTicketMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createEscalationTicket(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateEscalationTicketMutationResult = NonNullable<Awaited<ReturnType<typeof createEscalationTicket>>>
+    export type CreateEscalationTicketMutationBody = BodyType<EscalationTicketInput>
+    export type CreateEscalationTicketMutationError = ErrorType<unknown>
+    export type CreateEscalationTicketMutationVariables = {data: BodyType<EscalationTicketInput>}
+
+    export const useCreateEscalationTicket = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createEscalationTicket>>, TError,CreateEscalationTicketMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createEscalationTicket>>,
+        TError,
+        CreateEscalationTicketMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateEscalationTicketMutationOptions(options), queryClient);
+    }
+
 export const getBookAmbulanceUrl = () => {
 
 
@@ -1486,3 +1666,10 @@ export function useGetActiveDrills<TData = Awaited<ReturnType<typeof getActiveDr
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+
+

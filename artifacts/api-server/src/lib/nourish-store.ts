@@ -1,6 +1,6 @@
 import { createHmac, randomBytes, randomUUID } from 'node:crypto';
-import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
-import { ambulanceBookings, auditLogs, clinicalVisits, consentLogs, db, facilities, users } from '@workspace/db';
+import { and, asc, desc, eq, inArray, isNull } from 'drizzle-orm';
+import { ambulanceBookings, auditLogs, clinicalVisits, consentLogs, db, escalationTickets, facilities, users } from '@workspace/db';
 import type { ClinicalProfile, Facility, Patient, PatientRecord } from '@workspace/api-zod';
 import { demoFacilities, evaluate, type WireAssessment, type WireVisit } from '@workspace/nourish-logic';
 
@@ -18,11 +18,16 @@ export const healthId = () => `N360-SNP-${randomBytes(4).toString('hex').toUpper
 export class AppError extends Error { constructor(public status: number, message: string) { super(message); } }
 
 const cases = [
-  { health_id: 'N360-SNP-1001', legacy: 'N360-SNP-4821', patient_type: 'CHILD', label: 'Aarav · Child', village: 'Ganaur', risk_tier: 'GREEN' },
-  { health_id: 'N360-SNP-1002', legacy: 'N360-SNP-5306', patient_type: 'PREGNANT_LADY', label: 'Meena · Pregnant', village: 'Murthal', risk_tier: 'AMBER' },
-  { health_id: 'N360-SNP-1003', legacy: 'N360-SNP-7812', patient_type: 'MOTHER', label: 'Sunita · Postpartum', village: 'Rai', risk_tier: 'RED' },
+  { health_id: '1', aliases: ['N360-SNP-1001','N360-SNP-4821'], full_name: 'Kavya Sharma', guardian_name: 'Sunita Sharma', patient_type: 'CHILD', label: 'Kavya · Child', village: 'Ganaur', risk_tier: 'GREEN' },
+  { health_id: '2', aliases: ['N360-SNP-1002','N360-SNP-5306'], full_name: 'Rekha Verma', guardian_name: null, patient_type: 'PREGNANT_LADY', label: 'Rekha · Pregnancy', village: 'Murthal', risk_tier: 'AMBER' },
+  { health_id: '3', aliases: ['N360-SNP-1003','N360-SNP-7812'], full_name: 'Pooja Kumari', guardian_name: null, patient_type: 'MOTHER', label: 'Pooja · Postpartum', village: 'Rai', risk_tier: 'RED' },
+  { health_id: '4', aliases: ['N360-SNP-1004','N360-SNP-4824'], full_name: 'Aarav Malik', guardian_name: 'Neha Malik', patient_type: 'CHILD', label: 'Aarav · Child', village: 'Barota', risk_tier: 'AMBER' },
+  { health_id: '5', aliases: ['N360-SNP-1005','N360-SNP-5307'], full_name: 'Meera Yadav', guardian_name: null, patient_type: 'PREGNANT_LADY', label: 'Meera · Pregnancy', village: 'Kundli', risk_tier: 'RED' },
+  { health_id: '6', aliases: ['N360-SNP-1006','N360-SNP-7813'], full_name: 'Sana Ali', guardian_name: null, patient_type: 'MOTHER', label: 'Sana · Postpartum', village: 'Sonipat', risk_tier: 'AMBER' },
+  { health_id: '7', aliases: ['N360-SNP-1007','N360-SNP-4825'], full_name: 'Nisha Dahiya', guardian_name: null, patient_type: 'PREGNANT_LADY', label: 'Nisha · Pregnancy', village: 'Kharkhoda', risk_tier: 'AMBER' },
 ] as const;
-export const demoCases = cases.map(({legacy:_,...item}) => item);
+export const demoCases = cases.map(({aliases:_,full_name:__,guardian_name:___,...item}) => item);
+export const sampleSourceId = (healthId: string) => cases.find(c => c.health_id === healthId)?.aliases[0];
 
 export function patient(user: User): Patient {
   const n = user.phoneNumber.slice(-10);
@@ -55,9 +60,9 @@ export async function grant(tx: Tx, user: User, device: string) {
 
 export async function lockAccount(tx: Tx, id: string) {
   const [u] = await tx.select().from(users).where(and(eq(users.id, id),eq(users.isTemplate,false))).for('update');
-  if (!u) throw new AppError(401, 'Sign in to the demo first.');
+  if (!u) throw new AppError(401, 'Sign in to a profile first.');
   const [c] = await tx.select({id:consentLogs.id}).from(consentLogs).where(and(eq(consentLogs.userId,id),isNull(consentLogs.revokedAt))).limit(1);
-  if (!c) throw new AppError(403, 'There is no active consent for this demo record.');
+  if (!c) throw new AppError(403, 'There is no active consent for this profile.');
   return u;
 }
 
@@ -89,10 +94,10 @@ export async function saveBatch(tx: Tx, user: User, input: WireAssessment[]): Pr
   return [...result.values()];
 }
 
-export async function cloneDemo(tx: Tx, template: User, device: string): Promise<User> {
-  const [u] = await tx.insert(users).values({ healthId:healthId(), patientType:template.patientType, fullName:template.fullName,
+export async function cloneDemo(tx: Tx, template: User, device: string, healthIdOverride?: string): Promise<User> {
+  const [u] = await tx.insert(users).values({ healthId:healthIdOverride ?? healthId(), patientType:template.patientType, fullName:template.fullName,
     phoneNumber:template.phoneNumber, village:template.village, guardianName:template.guardianName, profile:template.profile, isDemo:true }).returning();
-  if (!u) throw new Error('Demo profile could not be created');
+  if (!u) throw new Error('Sample profile could not be created');
   await grant(tx,u,device);
   const {visits} = await getRecord(tx, template);
   for (const v of visits) await writeVisit(tx,u,{...v,id:randomUUID()});
@@ -103,31 +108,73 @@ export async function cloneDemo(tx: Tx, template: User, device: string): Promise
 export async function seed(): Promise<void> {
   secret();
   await db.transaction(async tx => {
-    const saved = await tx.select({id:users.healthId}).from(users).where(inArray(users.healthId,cases.flatMap(c => [c.health_id,c.legacy])));
+    const saved = await tx.select().from(users).where(inArray(users.healthId,cases.flatMap(c => [c.health_id,...c.aliases])));
+    for (const user of saved) {
+      const sample = cases.find(c => (c.aliases as readonly string[]).includes(user.healthId));
+      if (sample && user.isTemplate) {
+        await tx.update(users).set({fullName:sample.full_name,guardianName:sample.guardian_name}).where(eq(users.id,user.id));
+      }
+    }
     for (const f of demoFacilities) await tx.insert(facilities).values({ id:f.id,name:f.name,tier:f.tier,lat:f.lat,lng:f.lng,distanceKm:f.distance_km,
       capabilities:f.capabilities,bloodBankStatus:f.blood_bank_status as typeof facilities.$inferInsert.bloodBankStatus,nicusAvailable:f.nicus_available }).onConflictDoNothing();
     const profiles: ClinicalProfile[] = [
       { dob_months:30, birth_weight_kg:3.1, last_weight_kg:12.4, immunization_status:'Up to date (synthetic)' },
       { age:25, gestational_weeks:25, gravida:2, blood_group:'B+' }, { age:29, days_postpartum:12, delivery_type:'Normal', blood_group:'O+' },
+      { dob_months:22, birth_weight_kg:2.8, last_weight_kg:9.8, immunization_status:'Up to date (synthetic)' },
+      { age:27, gestational_weeks:31, gravida:2, blood_group:'O+' },
+      { age:30, days_postpartum:42, delivery_type:'C-Section', blood_group:'A+' },
+      { age:23, gestational_weeks:20, gravida:1, blood_group:'B-' },
     ];
     const examples: WireAssessment['vitals'][][] = [
       [{weight_kg:11.7,muac_cm:14,temp_c:36.8,resp_rate:27},{weight_kg:12.1,muac_cm:14.4,temp_c:36.9,resp_rate:26},{weight_kg:12.4,muac_cm:14.7,temp_c:36.7,resp_rate:27}],
       [{bp_sys:102,bp_dia:66,hb:11.4,weight_kg:52.7},{bp_sys:116,bp_dia:73,hb:10.1,weight_kg:54.6},{bp_sys:134,bp_dia:85,hb:9.2,weight_kg:56.1}],
       [{bp_sys:118,bp_dia:76,hb:11.3,temp_c:36.7},{bp_sys:110,bp_dia:71,hb:10.4,temp_c:37.2},{bp_sys:91,bp_dia:58,hb:6.6,temp_c:38.2}],
+      [{weight_kg:9.6,muac_cm:12.7,temp_c:36.8,resp_rate:28},{weight_kg:9.8,muac_cm:12.4,temp_c:36.9,resp_rate:29},{weight_kg:9.8,muac_cm:12.2,temp_c:36.8,resp_rate:30}],
+      [{bp_sys:118,bp_dia:76,hb:11.6,weight_kg:61.2},{bp_sys:126,bp_dia:80,hb:10.9,weight_kg:63},{bp_sys:162,bp_dia:108,hb:10.4,weight_kg:64.3}],
+      [{bp_sys:112,bp_dia:72,hb:10.8,temp_c:36.7},{bp_sys:114,bp_dia:74,hb:10.1,temp_c:36.8},{bp_sys:116,bp_dia:76,hb:9.6,temp_c:36.9}],
+      [{bp_sys:116,bp_dia:72,hb:11.7,weight_kg:54},{bp_sys:126,bp_dia:80,hb:11.5,weight_kg:55},{bp_sys:143,bp_dia:91,hb:11.2,weight_kg:56}],
+    ];
+    const visitDays = [[100,49,1],[100,49,1],[11,6,1],[90,45,1],[90,45,1],[60,30,1],[100,49,1]];
+    const symptomHistory: string[][][] = [
+      [[],[],[]], [[],[],[]], [[],[],['Excessive vaginal blood loss','Severe dizziness / fainting']],
+      [[],[],[]], [[],[],['Severe headache']], [[],[],[]], [[],[],[]],
     ];
     for (const [i,c] of cases.entries()) {
-      for (const id of [c.health_id,c.legacy]) {
-        if (saved.some(u => u.id === id)) continue;
-        const [u] = await tx.insert(users).values({ healthId:id, patientType:c.patient_type, fullName:['Aarav (Demo)','Meena (Demo)','Sunita (Demo)'][i]!,
-          phoneNumber:`+91000000000${i+1}`, village:c.village, guardianName:i===0?'Demo Guardian':null, profile:profiles[i]!, isTemplate:true }).onConflictDoNothing().returning();
+      for (const id of [c.health_id,...c.aliases]) {
+        if (saved.some(u => u.healthId === id)) continue;
+        const [u] = await tx.insert(users).values({ healthId:id, patientType:c.patient_type, fullName:c.full_name,
+          phoneNumber:`+91000000000${i+1}`, village:c.village, guardianName:c.guardian_name, profile:profiles[i]!, isTemplate:id!==c.health_id, isDemo:true }).onConflictDoNothing().returning();
         if (!u) continue;
         await grant(tx,u,'synthetic-template');
         await audit(tx,u,'DEMO_TEMPLATE_CREATED','system');
-        const days = i===2 ? [11,6,1] : [100,49,1];
         await saveBatch(tx,u,examples[i]!.map((v,j) => ({ mutation_id:randomUUID(), vitals:v,
-          symptoms:i===2 && j===2 ? ['Excessive vaginal blood loss','Severe dizziness / fainting'] : [],
-          recorded_at:new Date(Date.now() - days[j]! * 86_400_000) })));
+          symptoms:symptomHistory[i]![j]!,
+          recorded_at:new Date(Date.now() - visitDays[i]![j]! * 86_400_000) })));
       }
+    }
+    const ticketExamples = [
+      { healthId: '2', authority: 'CHC_MEDICAL_OFFICER', status: 'PENDING', actionNote: null },
+      { healthId: '3', authority: 'DISTRICT_MEDICAL_OFFICER', status: 'ACTION_TAKEN', actionNote: 'Training review documented: readings were rechecked and a follow-up visit was recorded.' },
+      { healthId: '5', authority: 'DISTRICT_MEDICAL_OFFICER', status: 'PENDING', actionNote: null },
+    ] as const;
+    for (const example of ticketExamples) {
+      const [existing] = await tx.select({id:escalationTickets.id}).from(escalationTickets)
+        .where(eq(escalationTickets.healthId,example.healthId)).limit(1);
+      if (existing) continue;
+      const [latest] = await tx.select().from(clinicalVisits)
+        .where(eq(clinicalVisits.healthId,example.healthId))
+        .orderBy(desc(clinicalVisits.createdAt)).limit(1);
+      if (!latest || (latest.riskTier !== 'AMBER' && latest.riskTier !== 'RED')) continue;
+      const rules = Array.isArray(latest.triggeredRules) ? latest.triggeredRules as string[] : [];
+      await tx.insert(escalationTickets).values({
+        healthId: example.healthId,
+        visitId: latest.id,
+        authority: example.authority,
+        riskTier: latest.riskTier,
+        reason: rules.slice(0,3).join(' ') || `${latest.riskTier} review from the latest check-up.`,
+        status: example.status,
+        actionNote: example.actionNote,
+      }).onConflictDoNothing();
     }
   });
 }

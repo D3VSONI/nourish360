@@ -32,15 +32,15 @@ dispatch.post('/ambulance/book',async (req,res)=>{
   limit(req,'dispatch',20);
   const body = parse(BookAmbulanceBody,req.body);
   const point = villages.find(p=>p.name.toLowerCase()===body.pickup_village.trim().toLowerCase());
-  if (!point) throw new AppError(400,'Select a listed pickup village. Real GPS is not collected by this demo.');
+  if (!point) throw new AppError(400,'Select a listed pickup village. Real GPS location is not collected here.');
   const trigger = triggers.find(([match])=> match.test(body.emergency_type))?.[1];
-  if (!trigger) throw new AppError(400,'Select a demo emergency scenario.');
+  if (!trigger) throw new AppError(400,'Select a practice emergency scenario.');
   const accountId = await account(req,true);
   const expected = req.get('x-nourish-record');
-  if (expected && !accountId) throw new AppError(401,'Sign in to save this demo drill to your profile.');
+  if (expected && !accountId) throw new AppError(401,'Sign in to save this practice drill to your profile.');
   const booking = await db.transaction(async tx=>{
     const u = accountId ? await lockAccount(tx,accountId) : null;
-    if (expected && expected !== u?.healthId) throw new AppError(409,'The signed-in profile changed. Reopen the correct demo record first.');
+    if (expected && expected !== u?.healthId) throw new AppError(409,'The signed-in profile changed. Reopen the correct record first.');
     const requestKey = digest(`dispatch:${u?.id ?? 'guest'}:${body.mutation_id}`);
     const identical = (row:typeof ambulanceBookings.$inferSelect) => {
       if (row.patientType !== body.patient_type || row.pickupVillage !== point.name || row.emergencyType !== trigger) {
@@ -58,13 +58,13 @@ dispatch.post('/ambulance/book',async (req,res)=>{
     const [row] = await tx.insert(ambulanceBookings).values({bookingCode:`SIM-${randomBytes(4).toString('hex').toUpperCase()}`,
       requestKey,healthId:u?.healthId,patientType:body.patient_type,emergencyType:trigger,pickupVillage:point.name,
       pickupLat:point.lat,pickupLng:point.lng,destinationFacilityId:facility.id,destinationFacilityName:facility.name,bypassedFacilities:bypassed,
-      driverName:'Ravi Kumar (Demo)',driverPhone:'+91-00XXXX0000',ambulanceNumber:'HR-10-GV-1084',etaSeconds:simulationSeconds,status:'DISPATCHED',
+      driverName:'Ravi Kumar',driverPhone:'+91-00XXXX0000',ambulanceNumber:'HR-10-GV-1084',etaSeconds:simulationSeconds,status:'DISPATCHED',
       snapshot:{route,guide:guides[body.patient_type],destination:facility,bypassed_facilities:bypassed}})
       .onConflictDoNothing({target:ambulanceBookings.requestKey}).returning();
     if (!row) {
       const [saved] = await tx.select().from(ambulanceBookings).where(eq(ambulanceBookings.requestKey,requestKey));
       if (saved) return identical(saved);
-      throw new AppError(503,'Could not save the demo drill. Retry the same request.');
+      throw new AppError(503,'Could not save the practice drill. Retry the same request.');
     }
     if (u && row.healthId) await audit(tx,u,'DEMO_AMBULANCE_BOOKED');
     return tracking(row);
@@ -83,7 +83,7 @@ dispatch.get('/ambulance/active',async (req,res)=>{
 async function loadDrill(tx:Tx,id:string,owner:User|null) {
   const [row] = await tx.select().from(ambulanceBookings).where(eq(ambulanceBookings.id,id));
   // Guest bookings are synthetic and shareable by their opaque booking URL.
-  if (!row || (row.healthId && row.healthId!==owner?.healthId)) throw new AppError(404,'Demo tracking session not found.');
+  if (!row || (row.healthId && row.healthId!==owner?.healthId)) throw new AppError(404,'Practice tracking session not found.');
   return row;
 }
 async function ownerFor(tx:Tx,id:string|undefined) {
@@ -108,5 +108,5 @@ dispatch.post('/ambulance/:id/family-call',async (req,res)=>{
     await tx.update(ambulanceBookings).set({familyCallAt:new Date()}).where(eq(ambulanceBookings.id,id));
     return row;
   });
-  out(res,TriggerFamilyCallResponse,{message:'Demo family voice alert logged. No call was placed.',reference:row.bookingCode});
+  out(res,TriggerFamilyCallResponse,{message:'Practice family voice alert logged. No call was placed.',reference:row.bookingCode});
 });

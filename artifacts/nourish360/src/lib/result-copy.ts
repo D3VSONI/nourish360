@@ -2,9 +2,9 @@ import type { Forecast,PatientType,RiskTier } from '@workspace/api-client-react'
 import { local,type Lang,type Pair } from './i18n';
 
 export const tierCopy:Record<RiskTier,{tag:Pair;title:Pair;note:Pair;zone:string}>={
- GREEN:{tag:['Green · Routine','हरा · सामान्य जाँच'],title:['No demo warning flags','डेमो में कोई चेतावनी नहीं'],note:['These rules check only a few signs. Keep the next visit agreed with your health worker.','इस अभ्यास में कुछ ही लक्षण देखे गए हैं। स्वास्थ्यकर्मी से तय अगली जाँच कराएँ।'],zone:'zone-green'},
+ GREEN:{tag:['Green · Routine','हरा · सामान्य जाँच'],title:['No warning flags in these readings','इन मापों में चेतावनी नहीं'],note:['These checks cover only a few signs. Keep the next visit agreed with your health worker.','इन जाँचों में कुछ ही लक्षण देखे गए हैं। स्वास्थ्यकर्मी से तय अगली जाँच कराएँ।'],zone:'zone-green'},
  AMBER:{tag:['Amber · Review','पीला · दोबारा जाँच'],title:['Ask a clinician to review','डॉक्टर से जाँच करवाएँ'],note:['The readings or symptoms need review, or a key reading is missing.','माप या लक्षण डॉक्टर को दिखाने हैं, या कोई ज़रूरी माप बाकी है।'],zone:'zone-amber'},
- RED:{tag:['Red · Urgent','लाल · तुरंत मदद'],title:['Urgent warning in this demo','डेमो में गंभीर चेतावनी'],note:['If this is a real emergency, call 108 now. Practice tracking does not send help.','असली इमरजेंसी में अभी 108 मिलाएँ। अभ्यास से मदद नहीं भेजी जाती।'],zone:'zone-red'},
+ RED:{tag:['Red · Urgent','लाल · तुरंत मदद'],title:['Urgent warning in these readings','इन मापों में गंभीर चेतावनी'],note:['If this is a real emergency, call 108 now. This practice tracker does not send help.','असली इमरजेंसी में अभी 108 मिलाएँ। इस अभ्यास से मदद नहीं भेजी जाती।'],zone:'zone-red'},
 };
 const reasons={
  childDanger:['Child danger sign or breathing difficulty','बच्चे में गंभीर लक्षण या साँस लेने में दिक्कत'],
@@ -27,10 +27,10 @@ const reasons={
 } as const satisfies Record<string,Pair>;
 // Historic visits retain English rule snapshots. Translate their stable categories and parameters, not their prose.
 const adapters:[keyof typeof reasons,RegExp][]=[
- ['childDanger',/^IMNCI example: a general danger sign/],['temperature',/^Demo priority rule: temperature ([\d.]+)/],['fastBreathing',/^IMNCI example: recorded breathing rate (\d+)\/min at (\d+)/],
- ['childSymptoms',/^Reported temperature, breathing/],['muac',/^Demo nutrition rule: MUAC ([\d.]+)/],['weight',/^Weight did not increase/],['veryHighBp',/^Demo maternal danger rule:/],
- ['highBp',/^Demo maternal review rule:/],['climbingBp',/^Blood pressure rose ([+-]?[\d.]+) mmHg.*net ([+-]?[\d.]+)/],['anemiaDanger',/^Demo anemia rule: recorded hemoglobin ([\d.]+)/],
- ['anemiaReview',/^Demo anemia review flag: Hb ([\d.]+)/],['pregnancyDanger',/^PMSMA example:/],['swelling',/^Reported sudden swelling/],['postpartumDanger',/^Postpartum example: reported heavy bleeding/],
+  ['childDanger',/^IMNCI example: a general danger sign/],['temperature',/^(?:Demo priority rule|Priority check): temperature ([\d.]+)/],['fastBreathing',/^IMNCI example: recorded breathing rate (\d+)\/min at (\d+)/],
+  ['childSymptoms',/^Reported temperature, breathing/],['muac',/^(?:Demo nutrition rule|Nutrition check): MUAC ([\d.]+)/],['weight',/^Weight did not increase/],['veryHighBp',/^(?:Demo maternal danger rule|Maternal safety check):/],
+  ['highBp',/^(?:Demo maternal review rule|Maternal review check):/],['climbingBp',/^Blood pressure rose ([+-]?[\d.]+) mmHg.*net ([+-]?[\d.]+)/],['anemiaDanger',/^(?:Demo anemia rule|Anemia safety check): recorded hemoglobin ([\d.]+)/],
+  ['anemiaReview',/^(?:Demo anemia review flag|Anemia review): Hb ([\d.]+)/],['pregnancyDanger',/^PMSMA example:/],['swelling',/^Reported sudden swelling/],['postpartumDanger',/^Postpartum example: reported heavy bleeding/],
  ['postpartumInfection',/^Postpartum example: possible infection/],['postpartumReview',/^Postpartum example: fever/],['missing',/^Some baseline readings are missing/],
 ];
 export function ruleLabel(wire:string,lang:Lang){

@@ -26,7 +26,7 @@ export default function Assess(){
   },[healthId]);
   useEffect(()=>{if(healthId&&loaded===healthId&&!submitted.current&&!busy)void saveDraft(healthId,vitals,symptoms,attempted.current??undefined).catch(()=>undefined);},[vitals,symptoms,healthId,loaded,busy]);
   if(!ready||(healthId&&loaded!==healthId))return <div className="mx-auto max-w-3xl animate-pulse px-4 py-10"><div className="h-60 rounded-3xl bg-muted"/></div>;
-  if(!record||!healthId)return <section className="mx-auto max-w-lg px-4 py-12"><div className="panel p-6"><h1 className="text-2xl font-bold">{tr('Open a demo profile first','पहले डेमो प्रोफ़ाइल खोलें')}</h1><Link href="/" data-testid="link-choose-role" className="tap tap-primary mt-4">{tr('Choose a role','किसकी जाँच है?')}</Link></div></section>;
+  if(!record||!healthId)return <section className="mx-auto max-w-lg px-4 py-12"><div className="panel p-6"><h1 className="text-2xl font-bold">{tr('Open a patient profile first','पहले मरीज़ की प्रोफ़ाइल खोलें')}</h1><Link href="/" data-testid="link-choose-role" className="tap tap-primary mt-4">{tr('Choose a role','किसकी जाँच है?')}</Link></div></section>;
   const role=record.patient.patient_type;
   const hasMuac=role==='CHILD'&&muacApplicable(record.patient.profile.dob_months);
   const fields=vitalFields[role].filter(k=>k!=='muac_cm'||hasMuac);
