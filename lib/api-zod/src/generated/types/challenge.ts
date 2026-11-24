@@ -8,9 +8,8 @@
 import type { ChallengeChannel } from './challengeChannel';
 
 export interface Challenge {
-  /** @pattern ^N360-SNP-[A-Z0-9]{4,8}$ */
+  /** @pattern ^(?:[1-7]|N360-SNP-[A-Z0-9]{4,8})$ */
   health_id: string;
   challenge_id: string;
   channel: ChallengeChannel;
-  demo_code?: string;
 }

@@ -22,7 +22,7 @@ export default function Track(){
   const left=Math.max(0,b.eta_seconds-Math.max(0,Math.floor((now-q.dataUpdatedAt)/1000)));const progress=Math.min(1,Math.max(0,1-left/total));
   const eta=`${String(Math.floor(left/60)).padStart(2,'0')}:${String(left%60).padStart(2,'0')}`;
   const live=online&&!q.isError;const status=left===0?tr('Arrived in practice','अभ्यास में पहुँच गई'):b.status==='DISPATCHED'?tr('Practice started','अभ्यास शुरू'):tr('Moving in the drill','अभ्यास में रास्ते पर');
-  const familyMessage=tr('This is a Notion360 practice alert. No ambulance was sent. In a real emergency call 108.','यह Notion360 के अभ्यास की सूचना है। कोई एम्बुलेंस नहीं भेजी गई। असली इमरजेंसी में 108 मिलाएँ।');
+  const familyMessage=tr('This is a Nourish360 practice alert. No ambulance was sent. In a real emergency call 108.','यह Nourish360 के अभ्यास की सूचना है। कोई एम्बुलेंस नहीं भेजी गई। असली इमरजेंसी में 108 मिलाएँ।');
   return <div className="mx-auto max-w-5xl space-y-4 px-4 py-6">
     <Link href="/" className="tap gap-2" data-testid="link-back-home"><ArrowLeft size={19}/>{tr('Home','मुख्य पेज')}</Link>
     <div className="zone zone-red flex flex-wrap items-center justify-between gap-3 p-4" data-testid="text-sim-warning"><div><h1 className="text-xl font-extrabold">{tr('Simulation only','सिर्फ अभ्यास')}</h1><p className="text-sm">{tr('No ambulance has been sent. The route and crew are fictional.','कोई एम्बुलेंस नहीं भेजी गई। रास्ता और टीम काल्पनिक हैं।')}</p></div><Call108 testId="link-call-108-track"/></div>

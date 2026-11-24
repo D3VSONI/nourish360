@@ -9,7 +9,7 @@ import type { PatientType } from './patientType';
 import type { RiskTier } from './riskTier';
 
 export interface DemoCase {
-  /** @pattern ^N360-SNP-[A-Z0-9]{4,8}$ */
+  /** @pattern ^(?:[1-7]|N360-SNP-[A-Z0-9]{4,8})$ */
   health_id: string;
   patient_type: PatientType;
   label: string;

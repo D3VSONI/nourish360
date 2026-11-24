@@ -14,7 +14,7 @@ export function useSaveDrill() {
   const busy = useRef(false);
   const last = useRef<{fingerprint:string;id:string} | null>(null);
   const save = useCallback(async (data:Omit<BookingInput,'mutation_id'>) => {
-    if (busy.current) throw new Error('A demo drill is already being saved.');
+    if (busy.current) throw new Error('A practice drill is already being saved.');
     busy.current = true;
     setPending(true);
     setError('');

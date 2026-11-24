@@ -4,12 +4,12 @@ import * as api from '@workspace/api-zod';
 import { auditLogs, clinicalVisits, consentLogs, db, users } from '@workspace/db';
 import { validateAssessment, villages } from '@workspace/nourish-logic';
 import { account, browser, canonicalPhone, clearSession, consume, establish, issue, limit, profileFor, syntheticPhone } from '../lib/nourish-auth';
-import { AppError, audit, cloneDemo, demoCases, digest, erase, getRecord, grant, healthId, lockAccount, saveBatch, type Tx, type User } from '../lib/nourish-store';
+import { AppError, audit, cloneDemo, demoCases, digest, erase, getRecord, grant, healthId, lockAccount, sampleSourceId, saveBatch, type Tx, type User } from '../lib/nourish-store';
 
 export const router = Router();
 export function parse<T>(schema:{safeParse:(data:unknown)=>{success:true;data:T}|{success:false}}, data:unknown): T {
   const parsed = schema.safeParse(data);
-  if (!parsed.success) throw new AppError(400,'Some fields are missing or invalid. Check the demo form.');
+  if (!parsed.success) throw new AppError(400,'Some fields are missing or invalid. Check the form.');
   return parsed.data;
 }
 export function out<T>(res:Response,schema:{parse:(value:unknown)=>T},data:unknown) { res.json(schema.parse(data)); }
@@ -18,7 +18,7 @@ export async function owned<T>(req:Request, run:(tx:Tx,u:User)=>Promise<T>): Pro
   return db.transaction(async tx => {
     const u = await lockAccount(tx,id);
     const expected = req.get('x-nourish-record');
-    if (expected && expected !== u.healthId) throw new AppError(409,'The signed-in profile changed. Reopen the correct demo record first.');
+    if (expected && expected !== u.healthId) throw new AppError(409,'The signed-in profile changed. Reopen the correct record first.');
     return run(tx,u);
   });
 }
@@ -28,9 +28,14 @@ router.post('/demo/session',async (req,res) => {
   const data = parse(api.StartDemoBody,req.body);
   const device = browser(req,res);
   const result = await db.transaction(async tx => {
-    const [template] = await tx.select().from(users).where(and(eq(users.healthId,data.health_id),eq(users.isTemplate,true)));
-    if (!template) throw new AppError(404,'Demo case not found.');
-    const u = await cloneDemo(tx,template,device);
+    const [selected] = await tx.select().from(users).where(eq(users.healthId,data.health_id));
+    let u = selected;
+    if (!selected || selected.isTemplate) {
+      const sourceId = selected?.healthId ?? sampleSourceId(data.health_id) ?? data.health_id;
+      const [template] = await tx.select().from(users).where(and(eq(users.healthId,sourceId),eq(users.isTemplate,true)));
+      if (!template) throw new AppError(404,'Sample profile not found.');
+      u = await cloneDemo(tx,template,device,selected ? undefined : data.health_id);
+    }
     await audit(tx,u,'RECORD_READ');
     return {id:u.id,record:await getRecord(tx,u)};
   });
@@ -81,7 +86,7 @@ router.post('/auth/verify-otp',async (req,res) => {
   const data = parse(api.VerifyOtpBody,req.body);
   const result = await consume(req,data.challenge_id,data.health_id,data.code,async (tx,userId,device) => {
     const [found] = await tx.select().from(users).where(eq(users.id,userId));
-    if (!found) throw new AppError(400,'The demo details did not match an account.');
+    if (!found) throw new AppError(400,'The code or profile details did not match.');
     const u = found.isTemplate ? await cloneDemo(tx,found,device) : await lockAccount(tx,found.id);
     await audit(tx,u,'OTP_VERIFIED');
     await audit(tx,u,'RECORD_READ');
@@ -118,7 +123,7 @@ router.post('/visits/:id/review',async (req,res) => {
       await audit(tx,u,'DEMO_PHC_REVIEW_LOGGED');
     }
   });
-  out(res,api.RequestReviewResponse,{message:'Demo priority PHC review logged. No real clinic was contacted.',reference:`PHC-${id.slice(0,8).toUpperCase()}`});
+  out(res,api.RequestReviewResponse,{message:'Practice priority review logged. No clinic was contacted.',reference:`PHC-${id.slice(0,8).toUpperCase()}`});
 });
 router.get('/privacy/export/:healthId',async (req,res) => {
   const {healthId} = parse(api.ExportRecordParams,req.params);
@@ -135,5 +140,5 @@ router.delete('/privacy/erase/:healthId',async (req,res) => {
   const {healthId} = parse(api.EraseRecordParams,req.params);
   await owned(req,async (tx,u) => { if (u.healthId!==healthId) throw new AppError(404,'Record not found.'); await erase(tx,u); });
   clearSession(res);
-  out(res,api.EraseRecordResponse,{message:'Demo profile and assessments erased. The consent entry was revoked and de-identified.'});
+  out(res,api.EraseRecordResponse,{message:'Profile and assessments erased. Consent was revoked and de-identified.'});
 });

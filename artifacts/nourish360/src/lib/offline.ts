@@ -37,7 +37,7 @@ function open() {
     };
     req.onsuccess = () => { req.result.onversionchange = () => req.result.close(); resolve(req.result); };
     req.onerror = () => reject(req.error);
-    req.onblocked = () => reject(new Error('Close older Notion360 tabs to enable local storage.'));
+    req.onblocked = () => reject(new Error('Close older Nourish360 tabs to enable local storage.'));
   });
 }
 

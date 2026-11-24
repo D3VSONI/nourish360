@@ -13,7 +13,7 @@ export const HealthCheckResponse = zod.object({
 })
 
 
-export const getCatalogResponseDemoCasesItemHealthIdRegExp = new RegExp('^N360-SNP-[A-Z0-9]{4,8}$');
+export const getCatalogResponseDemoCasesItemHealthIdRegExp = new RegExp('^(?:[1-7]|N360-SNP-[A-Z0-9]{4,8})$');
 
 
 export const GetCatalogResponse = zod.object({
@@ -33,14 +33,14 @@ export const GetCatalogResponse = zod.object({
 })
 
 
-export const startDemoBodyHealthIdRegExp = new RegExp('^N360-SNP-[A-Z0-9]{4,8}$');
+export const startDemoBodyHealthIdRegExp = new RegExp('^(?:[1-7]|N360-SNP-[A-Z0-9]{4,8})$');
 
 
 export const StartDemoBody = zod.object({
   "health_id": zod.string().regex(startDemoBodyHealthIdRegExp)
 })
 
-export const startDemoResponsePatientHealthIdRegExp = new RegExp('^N360-SNP-[A-Z0-9]{4,8}$');
+export const startDemoResponsePatientHealthIdRegExp = new RegExp('^(?:[1-7]|N360-SNP-[A-Z0-9]{4,8})$');
 
 
 export const StartDemoResponse = zod.object({
@@ -115,7 +115,7 @@ export const StartDemoResponse = zod.object({
 })
 
 
-export const getSessionResponsePatientHealthIdRegExp = new RegExp('^N360-SNP-[A-Z0-9]{4,8}$');
+export const getSessionResponsePatientHealthIdRegExp = new RegExp('^(?:[1-7]|N360-SNP-[A-Z0-9]{4,8})$');
 
 
 export const GetSessionResponse = zod.object({
@@ -232,18 +232,17 @@ export const RegisterPatientBody = zod.object({
   "channel": zod.enum(['sms', 'call'])
 })
 
-export const registerPatientResponseHealthIdRegExp = new RegExp('^N360-SNP-[A-Z0-9]{4,8}$');
+export const registerPatientResponseHealthIdRegExp = new RegExp('^(?:[1-7]|N360-SNP-[A-Z0-9]{4,8})$');
 
 
 export const RegisterPatientResponse = zod.object({
   "health_id": zod.string().regex(registerPatientResponseHealthIdRegExp),
   "challenge_id": zod.uuid(),
-  "channel": zod.enum(['sms', 'call']),
-  "demo_code": zod.string().optional()
+  "channel": zod.enum(['sms', 'call'])
 })
 
 
-export const sendOtpBodyHealthIdRegExp = new RegExp('^N360-SNP-[A-Z0-9]{4,8}$');
+export const sendOtpBodyHealthIdRegExp = new RegExp('^(?:[1-7]|N360-SNP-[A-Z0-9]{4,8})$');
 export const sendOtpBodyPhoneNumberMax = 15;
 
 
@@ -254,19 +253,18 @@ export const SendOtpBody = zod.object({
   "channel": zod.enum(['sms', 'call'])
 })
 
-export const sendOtpResponseHealthIdRegExp = new RegExp('^N360-SNP-[A-Z0-9]{4,8}$');
+export const sendOtpResponseHealthIdRegExp = new RegExp('^(?:[1-7]|N360-SNP-[A-Z0-9]{4,8})$');
 
 
 export const SendOtpResponse = zod.object({
   "health_id": zod.string().regex(sendOtpResponseHealthIdRegExp),
   "challenge_id": zod.uuid(),
-  "channel": zod.enum(['sms', 'call']),
-  "demo_code": zod.string().optional()
+  "channel": zod.enum(['sms', 'call'])
 })
 
 
-export const verifyOtpBodyHealthIdRegExp = new RegExp('^N360-SNP-[A-Z0-9]{4,8}$');
-export const verifyOtpBodyCodeRegExp = new RegExp('^[0-9]{6}$');
+export const verifyOtpBodyHealthIdRegExp = new RegExp('^(?:[1-7]|N360-SNP-[A-Z0-9]{4,8})$');
+export const verifyOtpBodyCodeRegExp = new RegExp('^[0-9]{4,6}$');
 
 
 export const VerifyOtpBody = zod.object({
@@ -275,7 +273,7 @@ export const VerifyOtpBody = zod.object({
   "code": zod.string().regex(verifyOtpBodyCodeRegExp)
 })
 
-export const verifyOtpResponsePatientHealthIdRegExp = new RegExp('^N360-SNP-[A-Z0-9]{4,8}$');
+export const verifyOtpResponsePatientHealthIdRegExp = new RegExp('^(?:[1-7]|N360-SNP-[A-Z0-9]{4,8})$');
 
 
 export const VerifyOtpResponse = zod.object({
@@ -508,6 +506,53 @@ export const RequestReviewResponse = zod.object({
 })
 
 
+export const listEscalationTicketsResponseHealthIdRegExp = new RegExp('^(?:[1-7]|N360-SNP-[A-Z0-9]{4,8})$');
+
+
+export const ListEscalationTicketsResponseItem = zod.object({
+  "id": zod.uuid(),
+  "health_id": zod.string().regex(listEscalationTicketsResponseHealthIdRegExp),
+  "patient_name": zod.string(),
+  "patient_type": zod.enum(['CHILD', 'PREGNANT_LADY', 'MOTHER']),
+  "village": zod.string(),
+  "authority": zod.enum(['PHC_MEDICAL_OFFICER', 'CHC_MEDICAL_OFFICER', 'DISTRICT_MEDICAL_OFFICER']),
+  "risk_tier": zod.enum(['GREEN', 'AMBER', 'RED']),
+  "reason": zod.string(),
+  "status": zod.enum(['PENDING', 'ACTION_TAKEN']),
+  "action_note": zod.string().nullable(),
+  "created_at": zod.coerce.date(),
+  "updated_at": zod.coerce.date()
+})
+export const ListEscalationTicketsResponse = zod.array(ListEscalationTicketsResponseItem)
+
+
+export const createEscalationTicketBodyHealthIdRegExp = new RegExp('^(?:[1-7]|N360-SNP-[A-Z0-9]{4,8})$');
+
+
+export const CreateEscalationTicketBody = zod.object({
+  "health_id": zod.string().regex(createEscalationTicketBodyHealthIdRegExp),
+  "authority": zod.enum(['PHC_MEDICAL_OFFICER', 'CHC_MEDICAL_OFFICER', 'DISTRICT_MEDICAL_OFFICER'])
+})
+
+export const createEscalationTicketResponseHealthIdRegExp = new RegExp('^(?:[1-7]|N360-SNP-[A-Z0-9]{4,8})$');
+
+
+export const CreateEscalationTicketResponse = zod.object({
+  "id": zod.uuid(),
+  "health_id": zod.string().regex(createEscalationTicketResponseHealthIdRegExp),
+  "patient_name": zod.string(),
+  "patient_type": zod.enum(['CHILD', 'PREGNANT_LADY', 'MOTHER']),
+  "village": zod.string(),
+  "authority": zod.enum(['PHC_MEDICAL_OFFICER', 'CHC_MEDICAL_OFFICER', 'DISTRICT_MEDICAL_OFFICER']),
+  "risk_tier": zod.enum(['GREEN', 'AMBER', 'RED']),
+  "reason": zod.string(),
+  "status": zod.enum(['PENDING', 'ACTION_TAKEN']),
+  "action_note": zod.string().nullable(),
+  "created_at": zod.coerce.date(),
+  "updated_at": zod.coerce.date()
+})
+
+
 /**
  * Reuse the randomly generated mutation_id when retrying the same drill. Signed-in keys are scoped to the active profile; guest retries rely on the unpredictable client-generated ID.
  */
@@ -618,14 +663,14 @@ export const TriggerFamilyCallResponse = zod.object({
 })
 
 
-export const exportRecordPathHealthIdRegExp = new RegExp('^N360-SNP-[A-Z0-9]{4,8}$');
+export const exportRecordPathHealthIdRegExp = new RegExp('^(?:[1-7]|N360-SNP-[A-Z0-9]{4,8})$');
 
 
 export const ExportRecordParams = zod.object({
   "healthId": zod.coerce.string().regex(exportRecordPathHealthIdRegExp)
 })
 
-export const exportRecordResponsePatientHealthIdRegExp = new RegExp('^N360-SNP-[A-Z0-9]{4,8}$');
+export const exportRecordResponsePatientHealthIdRegExp = new RegExp('^(?:[1-7]|N360-SNP-[A-Z0-9]{4,8})$');
 
 
 export const ExportRecordResponse = zod.object({
@@ -702,7 +747,7 @@ export const ExportRecordResponse = zod.object({
 })
 
 
-export const eraseRecordPathHealthIdRegExp = new RegExp('^N360-SNP-[A-Z0-9]{4,8}$');
+export const eraseRecordPathHealthIdRegExp = new RegExp('^(?:[1-7]|N360-SNP-[A-Z0-9]{4,8})$');
 
 
 export const EraseRecordParams = zod.object({

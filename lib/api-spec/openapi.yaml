@@ -301,6 +301,54 @@
         ]
       }
     },
+    "/escalation-tickets": {
+      "get": {
+        "operationId": "listEscalationTickets",
+        "tags": [
+          "health"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EscalationTicketList"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createEscalationTicket",
+        "tags": [
+          "health"
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EscalationTicket"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EscalationTicketInput"
+              }
+            }
+          }
+        }
+      }
+    },
     "/ambulance/book": {
       "post": {
         "operationId": "bookAmbulance",
@@ -419,7 +467,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "pattern": "^N360-SNP-[A-Z0-9]{4,8}$"
+              "pattern": "^(?:[1-7]|N360-SNP-[A-Z0-9]{4,8})$"
             }
           }
         ]
@@ -450,7 +498,7 @@
             "required": true,
             "schema": {
               "type": "string",
-              "pattern": "^N360-SNP-[A-Z0-9]{4,8}$"
+              "pattern": "^(?:[1-7]|N360-SNP-[A-Z0-9]{4,8})$"
             }
           }
         ]
@@ -608,7 +656,7 @@
         "properties": {
           "health_id": {
             "type": "string",
-            "pattern": "^N360-SNP-[A-Z0-9]{4,8}$"
+            "pattern": "^(?:[1-7]|N360-SNP-[A-Z0-9]{4,8})$"
           },
           "phone_number": {
             "type": "string",
@@ -633,7 +681,7 @@
         "properties": {
           "health_id": {
             "type": "string",
-            "pattern": "^N360-SNP-[A-Z0-9]{4,8}$"
+            "pattern": "^(?:[1-7]|N360-SNP-[A-Z0-9]{4,8})$"
           },
           "challenge_id": {
             "type": "string",
@@ -641,7 +689,7 @@
           },
           "code": {
             "type": "string",
-            "pattern": "^[0-9]{6}$"
+            "pattern": "^[0-9]{4,6}$"
           }
         },
         "required": [
@@ -655,7 +703,7 @@
         "properties": {
           "health_id": {
             "type": "string",
-            "pattern": "^N360-SNP-[A-Z0-9]{4,8}$"
+            "pattern": "^(?:[1-7]|N360-SNP-[A-Z0-9]{4,8})$"
           },
           "challenge_id": {
             "type": "string",
@@ -668,9 +716,6 @@
               "call"
             ]
           },
-          "demo_code": {
-            "type": "string"
-          }
         },
         "required": [
           "health_id",
@@ -683,7 +728,7 @@
         "properties": {
           "health_id": {
             "type": "string",
-            "pattern": "^N360-SNP-[A-Z0-9]{4,8}$"
+            "pattern": "^(?:[1-7]|N360-SNP-[A-Z0-9]{4,8})$"
           },
           "patient_type": {
             "$ref": "#/components/schemas/PatientType"
@@ -1032,7 +1077,7 @@
         "properties": {
           "health_id": {
             "type": "string",
-            "pattern": "^N360-SNP-[A-Z0-9]{4,8}$"
+            "pattern": "^(?:[1-7]|N360-SNP-[A-Z0-9]{4,8})$"
           },
           "patient_type": {
             "$ref": "#/components/schemas/PatientType"
@@ -1060,7 +1105,7 @@
         "properties": {
           "health_id": {
             "type": "string",
-            "pattern": "^N360-SNP-[A-Z0-9]{4,8}$"
+            "pattern": "^(?:[1-7]|N360-SNP-[A-Z0-9]{4,8})$"
           }
         },
         "required": [
@@ -1250,6 +1295,105 @@
         "required": [
           "message"
         ]
+      },
+      "EscalationAuthority": {
+        "type": "string",
+        "enum": [
+          "PHC_MEDICAL_OFFICER",
+          "CHC_MEDICAL_OFFICER",
+          "DISTRICT_MEDICAL_OFFICER"
+        ]
+      },
+      "EscalationTicketStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING",
+          "ACTION_TAKEN"
+        ]
+      },
+      "EscalationTicketInput": {
+        "type": "object",
+        "properties": {
+          "health_id": {
+            "type": "string",
+            "pattern": "^(?:[1-7]|N360-SNP-[A-Z0-9]{4,8})$"
+          },
+          "authority": {
+            "$ref": "#/components/schemas/EscalationAuthority"
+          },
+        },
+        "required": [
+          "health_id",
+          "authority"
+        ]
+      },
+      "EscalationTicket": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "health_id": {
+            "type": "string",
+            "pattern": "^(?:[1-7]|N360-SNP-[A-Z0-9]{4,8})$"
+          },
+          "patient_name": {
+            "type": "string"
+          },
+          "patient_type": {
+            "$ref": "#/components/schemas/PatientType"
+          },
+          "village": {
+            "type": "string"
+          },
+          "authority": {
+            "$ref": "#/components/schemas/EscalationAuthority"
+          },
+          "risk_tier": {
+            "$ref": "#/components/schemas/RiskTier"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/EscalationTicketStatus"
+          },
+          "action_note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "health_id",
+          "patient_name",
+          "patient_type",
+          "village",
+          "authority",
+          "risk_tier",
+          "reason",
+          "status",
+          "action_note",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "EscalationTicketList": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/EscalationTicket"
+        }
       },
       "PrivacyExport": {
         "type": "object",

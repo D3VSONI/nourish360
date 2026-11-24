@@ -90,7 +90,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const adoptRecord = useCallback(async (r: PatientRecord) => {
     const rev = ++revision.current;
-    if (!r.patient.is_demo) throw new Error('Only synthetic demo profiles may be opened.');
+    if (!r.patient.is_demo) throw new Error('Only synthetic sample profiles may be opened.');
     const id = r.patient.health_id;
     if (recRef.current?.patient.health_id!==id) update(null,[]);
     rememberVerification(id);
@@ -154,7 +154,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ++revision.current;
         rememberVerification(null);
         update(null,[]);
-        setSyncError('Sign in to the same demo profile to sync its queued assessments.');
+        setSyncError('Sign in to the same profile to sync its queued assessments.');
       } else {
         setSyncError(errorMessage(error,'Sync did not finish. Offline assessments remain on this device.'));
       }

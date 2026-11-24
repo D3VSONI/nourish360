@@ -49,47 +49,47 @@ export function evaluate(patient: Patient, input: WireAssessment, prior: WireVis
   const pregnant = patient.patient_type === 'PREGNANT_LADY';
   if (child) {
     if (/unable to drink|unable to breastfeed|unable to feed|vomit.*everything|unconscious|letharg|convuls|seizure|difficult breathing|breathing difficulty|chest indrawing/.test(text)) red.push('IMNCI example: a general danger sign or reported breathing difficulty.');
-    if (v.temp_c !== undefined && (v.temp_c < 35.5 || v.temp_c >= 39.5)) red.push(`Demo priority rule: temperature ${v.temp_c} °C.`);
+    if (v.temp_c !== undefined && (v.temp_c < 35.5 || v.temp_c >= 39.5)) red.push(`Priority check: temperature ${v.temp_c} °C.`);
     const age = patient.profile.dob_months ?? 0;
     const fast = age < 2 ? 60 : age < 12 ? 50 : 40;
     if (v.resp_rate !== undefined && v.resp_rate >= fast) amber.push(`IMNCI example: recorded breathing rate ${v.resp_rate}/min at ${age} months.`);
     if (/fast breathing|fever|cold body|umbilic/.test(text)) amber.push('Reported temperature, breathing, or umbilical concern.');
     if (age >= 6 && age < 60 && v.muac_cm !== undefined) {
-      if (v.muac_cm < 11.5) red.push(`Demo nutrition rule: MUAC ${v.muac_cm} cm.`);
-      else if (v.muac_cm < 12.5) amber.push(`Demo nutrition rule: MUAC ${v.muac_cm} cm.`);
+      if (v.muac_cm < 11.5) red.push(`Nutrition check: MUAC ${v.muac_cm} cm.`);
+      else if (v.muac_cm < 12.5) amber.push(`Nutrition check: MUAC ${v.muac_cm} cm.`);
     }
     const flat = weight && (weight.delta < 0 || (history.filter(p => p.vitals.weight_kg !== undefined).length >= 2 && weight.delta === 0 && weight.long <= 0.1));
     if (flat) amber.push('Weight did not increase across the recorded checkups.');
     if (flat || (age >= 6 && age < 60 && v.muac_cm !== undefined && v.muac_cm < 12.5)) {
-      add('Growth faltering / undernutrition', 'Elevated demo flag', 'Next 1–6 months', 'The recorded growth or MUAC pattern warrants review; there is no predicted personal probability.', 'Discuss growth measurements and age-appropriate feeding with a trained health worker.', 'यह एक उदाहरण है। बच्चे के वजन और भोजन के बारे में स्वास्थ्यकर्मी से बात करें।');
+      add('Growth faltering / undernutrition', 'Elevated flag', 'Next 1–6 months', 'The recorded growth or MUAC pattern warrants review; there is no predicted personal probability.', 'Discuss growth measurements and age-appropriate feeding with a trained health worker.', 'यह एक उदाहरण है। बच्चे के वजन और भोजन के बारे में स्वास्थ्यकर्मी से बात करें।');
     }
     if (weight) direction += weight.delta < 0 ? -1 : weight.delta > 0 ? 1 : 0;
   } else {
-    if ((v.bp_sys ?? 0) >= 160 || (v.bp_dia ?? 0) >= 110) red.push('Demo maternal danger rule: very high BP reading.');
-    else if ((v.bp_sys ?? 0) >= 140 || (v.bp_dia ?? 0) >= 90) amber.push('Demo maternal review rule: elevated BP reading.');
+    if ((v.bp_sys ?? 0) >= 160 || (v.bp_dia ?? 0) >= 110) red.push('Maternal safety check: very high BP reading.');
+    else if ((v.bp_sys ?? 0) >= 140 || (v.bp_dia ?? 0) >= 90) amber.push('Maternal review check: elevated BP reading.');
     if (bp && (bp.delta >= 15 || bp.long >= 20)) amber.push(`Blood pressure rose ${bp.delta >= 0 ? '+' : ''}${bp.delta} mmHg since the most recent systolic reading (net ${bp.long >= 0 ? '+' : ''}${bp.long} across the series).`);
-    if (v.hb !== undefined && v.hb < 7) red.push(`Demo anemia rule: recorded hemoglobin ${v.hb} g/dL.`);
-    else if (v.hb !== undefined && v.hb < (pregnant ? 11 : 10)) amber.push(`Demo anemia review flag: Hb ${v.hb} g/dL.`);
+    if (v.hb !== undefined && v.hb < 7) red.push(`Anemia safety check: recorded hemoglobin ${v.hb} g/dL.`);
+    else if (v.hb !== undefined && v.hb < (pregnant ? 11 : 10)) amber.push(`Anemia review: Hb ${v.hb} g/dL.`);
     if (pregnant && /severe headache|blurred vision|flashes|vaginal bleed|reduced fetal|reduced.*movement|absent.*movement|severe abdominal|seizur|convuls/.test(text)) red.push('PMSMA example: reported pregnancy danger sign.');
-    if (pregnant && /swell/.test(text)) amber.push('Reported sudden swelling; demo clinical review flag.');
+    if (pregnant && /swell/.test(text)) amber.push('Reported sudden swelling; clinical review recommended.');
     if (!pregnant && /blood loss|bleed|pad|hemorrhag|pph|faint|severe dizziness|seizur/.test(text)) red.push('Postpartum example: reported heavy bleeding, fainting, seizure, or severe dizziness.');
     if (!pregnant && (/fever|chills/.test(text) || (v.temp_c ?? 0) >= 38) && /foul|discharge/.test(text)) red.push('Postpartum example: possible infection signs reported together.');
     else if (!pregnant && (/fever|chills|foul|discharge|breast|engorge/.test(text) || (v.temp_c ?? 0) >= 38)) amber.push('Postpartum example: fever, discharge, or breast symptom merits review.');
-    if (v.hb !== undefined && v.hb < 11) add(pregnant ? 'Persistent anemia and pregnancy complications' : 'Persistent postpartum anemia', v.hb < 9 ? 'Elevated demo flag' : 'Review flag', pregnant ? 'Through delivery and the following months' : 'Next 1–3 months', 'Low recorded Hb; this is not a validated prediction of hemorrhage or birth weight.', 'Ask a clinician to review Hb, diet, and whether treatment or retesting is appropriate.', 'यह एक उदाहरण है। हीमोग्लोबिन की जाँच और उपचार के बारे में डॉक्टर से पूछें।');
-    if ((v.bp_sys ?? 0) >= 140 || (v.bp_dia ?? 0) >= 90 || (bp?.delta ?? 0) >= 15) add(pregnant ? 'Hypertensive complications of pregnancy' : 'Persistent elevated blood pressure', 'Elevated demo flag', 'Current visit through follow-up', 'Higher recorded BP or a rising pattern in this example.', 'Arrange a clinician review and confirm blood pressure measurements. Do not wait for a forecast date to seek help.', 'यह एक उदाहरण है। रक्तचाप की जाँच और आगे की देखभाल के लिए डॉक्टर से बात करें।');
+    if (v.hb !== undefined && v.hb < 11) add(pregnant ? 'Persistent anemia and pregnancy complications' : 'Persistent postpartum anemia', v.hb < 9 ? 'Elevated flag' : 'Review flag', pregnant ? 'Through delivery and the following months' : 'Next 1–3 months', 'Low recorded Hb; this is not a validated prediction of hemorrhage or birth weight.', 'Ask a clinician to review Hb, diet, and whether treatment or retesting is appropriate.', 'यह एक उदाहरण है। हीमोग्लोबिन की जाँच और उपचार के बारे में डॉक्टर से पूछें।');
+    if ((v.bp_sys ?? 0) >= 140 || (v.bp_dia ?? 0) >= 90 || (bp?.delta ?? 0) >= 15) add(pregnant ? 'Hypertensive complications of pregnancy' : 'Persistent elevated blood pressure', 'Elevated flag', 'Current visit through follow-up', 'Higher recorded BP or a rising pattern in this example.', 'Arrange a clinician review and confirm blood pressure measurements. Do not wait for a forecast date to seek help.', 'यह एक उदाहरण है। रक्तचाप की जाँच और आगे की देखभाल के लिए डॉक्टर से बात करें।');
     if (bp) direction -= bp.delta >= 5 ? 1 : bp.delta <= -5 ? -1 : 0;
     if (hb) direction += hb.delta >= 0.4 ? 1 : hb.delta <= -0.4 ? -1 : 0;
   }
   const needed: (keyof Vitals)[] = child ? ['weight_kg', 'temp_c', 'resp_rate'] : ['bp_sys', 'bp_dia', 'hb'];
   if (needed.some(k => v[k] === undefined)) amber.push('Some baseline readings are missing; no reassuring conclusion can be drawn.');
-  if (!forecast.length) add('Routine follow-up', 'No modeled change', 'Next 6 months', 'No pattern among the limited demo rules; this does not rule out health concerns.', 'Follow the checkup schedule agreed with your health worker.', 'अपने स्वास्थ्यकर्मी से अगली जाँच की तारीख पूछें।');
+  if (!forecast.length) add('Routine follow-up', 'No modeled change', 'Next 6 months', 'No pattern among the included checks; this does not rule out health concerns.', 'Follow the checkup schedule agreed with your health worker.', 'अपने स्वास्थ्यकर्मी से अगली जाँच की तारीख पूछें।');
   const risk_tier = red.length ? 'RED' : amber.length ? 'AMBER' : 'GREEN';
   const point = villages.find(p => p.name.toLowerCase() === patient.village.toLowerCase()) ?? villages[0]!;
   const routed_facility = risk_tier === 'RED' ? selectFacility(point, patient.patient_type, `${text} ${red.join(' ')}`, facilities) : undefined;
   return { id: input.mutation_id, created_at: occurred, vitals: v, symptoms: input.symptoms, risk_tier,
     triggered_rules: [...red, ...amber], six_month_forecast: forecast, trend_details: details,
     trend: !last || !details.length ? 'Baseline only' : direction < 0 ? 'Deteriorating' : direction > 0 ? 'Improving' : 'Stable or mixed',
-    next_step: risk_tier === 'RED' ? 'In a real emergency, call 108 immediately. The referral shown is simulated.' : risk_tier === 'AMBER' ? 'This example warrants clinical review. A demo PHC review can be logged; no clinic is contacted.' : child ? 'Demo routine plan: confirm the next growth and immunization check with a health worker.' : pregnant ? 'Demo routine plan: confirm your next antenatal check with your care team.' : 'Demo routine plan: confirm your next postnatal check with your care team.',
+    next_step: risk_tier === 'RED' ? 'In a real emergency, call 108 immediately. The referral shown is simulated.' : risk_tier === 'AMBER' ? 'This sample warrants clinical review. A practice PHC review can be logged; no clinic is contacted.' : child ? 'Routine plan: confirm the next growth and immunization check with a health worker.' : pregnant ? 'Routine plan: confirm your next antenatal check with your care team.' : 'Routine plan: confirm your next postnatal check with your care team.',
     ...(routed_facility ? { routed_facility } : {}),
   };
 }

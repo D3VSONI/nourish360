@@ -55,11 +55,11 @@ export function VillageMap({ route, pickup, destination, progress, showTiles=tru
     <MapContainer center={xy(pickup)} zoom={12} zoomControl={false} style={{height:'100%',minHeight:300,width:'100%'}}>
       {showTiles&&<TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" maxZoom={18} eventHandlers={tileEvents} attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' />}
       <Polyline positions={path.map(xy)} pathOptions={{color:'#0F766E',weight:5,opacity:.85,dashArray:'2 9',lineCap:'round'}} />
-      <Marker position={xy(pickup)} icon={pickupIcon} title={tr('Demo pickup','अभ्यास का गाँव')}><Tooltip>{tr('Demo pickup','अभ्यास का गाँव')}</Tooltip></Marker>
+      <Marker position={xy(pickup)} icon={pickupIcon} title={tr('Sample pickup','नमूना गाँव')}><Tooltip>{tr('Sample pickup','नमूना गाँव')}</Tooltip></Marker>
       <Marker position={xy(destination)} icon={hospitalIcon} title={destination.name}><Tooltip>{destination.name}</Tooltip></Marker>
       <Marker position={pointAt(path,progress)} icon={ambulanceIcon} title={tr('Simulated ambulance','अभ्यास की एम्बुलेंस')} zIndexOffset={200}><Tooltip>{tr('Simulated ambulance','अभ्यास की एम्बुलेंस')}</Tooltip></Marker>
       <Fit pickup={pickup} destination={destination} />
     </MapContainer>
-    {showTiles&&partial&&<p role="status" className="absolute bottom-6 left-3 z-[500] max-w-[80%] rounded-lg border bg-white p-2 text-xs font-bold">{tr('Some map details are unavailable. The demo route is shown.','नक्शे की कुछ जानकारी नहीं मिली। अभ्यास का रास्ता दिख रहा है।')}</p>}
+    {showTiles&&partial&&<p role="status" className="absolute bottom-6 left-3 z-[500] max-w-[80%] rounded-lg border bg-white p-2 text-xs font-bold">{tr('Some map details are unavailable. The practice route is shown.','नक्शे की कुछ जानकारी नहीं मिली। अभ्यास का रास्ता दिख रहा है।')}</p>}
   </div>;
 }
